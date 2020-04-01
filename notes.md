@@ -1,9 +1,9 @@
 # ideas/notes
-- cairo for drawing stuff (text on images, etc)
-- libcurl for web requests
-- sqlite for database needs
-- opencv to load images (overkill I know, but it works + is fast)
-- dear imgui for ui (fast, but not 'normal' looking)
+- cairo for drawing stuff (text on images, etc)  (GNU LIbrary GPL)
+- libcurl for web requests  (MIT license)
+- sqlite for database needs (public domain?)
+- opencv to load images (overkill I know, but it works + is fast) (BSD 3 clause license) 
+- dear imgui for ui (fast, but not 'normal' looking) (MIT License)
 
 ## database design (SQLITE)
 - songs table

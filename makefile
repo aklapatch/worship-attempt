@@ -13,19 +13,19 @@
 #
 
 #CXX = g++
-CXX = clang++
-CC=clang
+CXX = g++
+CC=gcc
 
 EXE =  main.exe
 SOURCES = main.cpp
 SOURCES += imgui/imgui_impl_glfw.cpp imgui/imgui_impl_opengl3.cpp
-SOURCES += imgui/imgui.cpp imgui/imgui_demo.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp
+SOURCES += imgui/imgui.cpp imgui/imgui_demo.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp sqlite_routines.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
 CXXFLAGS = -Iimgui/ -Iimgui/examples -Iimgui/examples/libs/gl3w
-CXXFLAGS += -g -Wall -Wformat -std=c++11
-LIBS =
+CXXFLAGS += -g -Wall -Wformat
+LIBS = -lsqlite3
 
 ##---------------------------------------------------------------------
 ## OPENGL LOADER
@@ -79,8 +79,8 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 endif
 
 # add opencv stuff
-CXXFLAGS+= `pkg-config --cflags opencv4` 
-LIBS+= `pkg-config --libs opencv4`
+CXXFLAGS+= `pkg-config --cflags opencv4` `pkg-config --cflags cairomm-1.0`
+LIBS+= `pkg-config --libs opencv4` `pkg-config --libs cairomm-1.0`
 
 ##---------------------------------------------------------------------
 ## BUILD RULES

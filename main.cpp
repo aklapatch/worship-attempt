@@ -3,6 +3,8 @@
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 // (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 
+#include<cairomm/cairomm.h>
+
 #include "imgui/imgui.h"
 #include "imgui/examples/imgui_impl_glfw.h"
 #include "imgui/examples/imgui_impl_opengl3.h"
@@ -10,9 +12,13 @@
 #include<iostream>
 #include<opencv2/core/core.hpp>
 #include<opencv2/highgui/highgui.hpp>
-
+#include<opencv2/imgproc.hpp>
+#include<opencv2/core/hal/interface.h>
+#include "sqlite_routines.h"
 #include<vector>
 #include<string>
+#include<algorithm>
+
 
 // About Desktop OpenGL function loaders:
 //  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
@@ -143,6 +149,7 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
+
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
@@ -150,8 +157,32 @@ int main(int, char**)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    cv::Mat image;
-    image = cv::imread("..\\bell_v22.png", cv::IMREAD_COLOR);
+    cv::Mat orig_image= cv::imread("bell_v22.png", cv::IMREAD_COLOR);
+
+    // convert to argb for cairo
+    cv::cvtColor(orig_image, orig_image, cv::COLOR_BGR2BGRA);
+    cv::Mat cairo_img(orig_image.size(),orig_image.type() );
+    cv::Mat tmp_image(orig_image.size(), orig_image.type());
+    // convert BGRA -> ARGB
+    int from_to[] = {0,3, 1,2, 2,1, 3,0};
+    cv::mixChannels(&orig_image, 1, &cairo_img, 1, from_to ,4);
+    //cv::cvtColor(image, image, cv::COLOR_BGRA2RGBA)
+    int stride = Cairo::ImageSurface::format_stride_for_width(Cairo::FORMAT_ARGB32, orig_image.cols);
+    Cairo::RefPtr<Cairo::ImageSurface> surf = Cairo::ImageSurface::create(cairo_img.data, Cairo::FORMAT_ARGB32, orig_image.cols, orig_image.rows, stride);
+    Cairo::RefPtr<Cairo::Context> cr = Cairo::Context::create(surf);
+    Cairo::RefPtr<Cairo::ToyFontFace> font = Cairo::ToyFontFace::create("Candara", Cairo::FONT_SLANT_ITALIC, Cairo::FONT_WEIGHT_BOLD);
+    cr->move_to(300,300);
+    cr->set_font_face(font);
+    cr->set_font_size(200);
+    std::string input = "stuff";
+    cr->show_text(input.c_str());
+
+    std::copy(surf->get_data(), surf->get_data()+ (orig_image.rows*orig_image.cols*4),tmp_image.data);
+    // now convert argb -> RGBA
+    cv::Mat disp_img(tmp_image.size(), tmp_image.type());
+    int final_from_to[] = {0,3, 1,0, 2,1, 3,2};
+    cv::mixChannels(&tmp_image, 1, &disp_img, 1, final_from_to, 4);
+
     // set up opengl to get image texture
     GLuint img_tex;
     glGenTextures(1, &img_tex);
@@ -161,7 +192,12 @@ int main(int, char**)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, image.cols, image.rows,0, GL_BGR, GL_UNSIGNED_BYTE, image.data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tmp_image.cols, tmp_image.rows,0, GL_RGBA, GL_UNSIGNED_BYTE, disp_img.data);
+
+    // try executing sqlite commands
+    sqlite3 * main_db;
+    int sq_err = init_and_open_db("outtest.db", &main_db);
+    sqlite3_close(main_db);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -193,7 +229,6 @@ int main(int, char**)
     const int orderbuflen =64;
     char orderbuf[orderbuflen+1] = {};
 
-
     const int title_searchbuf_len=64;
     char title_searchbuf[title_searchbuf_len+1] = {};
 
@@ -210,7 +245,6 @@ int main(int, char**)
     all_song_list.push_back(list[1]);
     all_song_list.push_back(list[2]);
     sched_song_list.push_back(list[0]);
-
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -310,27 +344,14 @@ int main(int, char**)
             }
             }
 
-                    
-
-
-
-        if (ImGui::Button("Search (does not work)")){
-        }
-
-        if (ImGui::Button("add song")){
-
-        }
-        if (ImGui::Button("remove song")){
-
-        }
-
+        ImGui::Text("Double click a song in the list to add it, \nand hover over a song and hit the delete key to remove a song from the schedule.");
 
         // schedule name box(probably not necessary)
         //
         ImGui::End(); // sched builder
 
         ImGui::Begin("img_test");
-        ImGui::Image((void*)(intptr_t)img_tex, ImVec2(image.cols, image.rows));
+        ImGui::Image((void*)(intptr_t)img_tex, ImVec2(tmp_image.cols, tmp_image.rows));
         ImGui::End();
 
         // song editor windows
