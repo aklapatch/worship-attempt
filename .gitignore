@@ -3,4 +3,5 @@
 *.png
 *.ini
 *.ttf
+*.ini
 imgui/

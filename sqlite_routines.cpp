@@ -70,5 +70,3 @@ int init_and_open_db(char * fname, sqlite3 **out_db) {
     }
     return 0;
 }
-
-    
