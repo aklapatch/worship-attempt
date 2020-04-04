@@ -1,9 +1,8 @@
 
-#include<iostream>
-#include<stdlib.h>
-#include<sqlite3.h>
-
+#include <iostream>
+#include <sqlite3.h>
+#include <stdlib.h>
 
 #pragma once
 
-int init_and_open_db(char *, sqlite3 ** );
+int init_and_open_db(char *, sqlite3 **);
