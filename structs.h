@@ -5,13 +5,17 @@
 #pragma once
 
 struct song_part {
-  std::vector<char> name, text;
+  std::string name, text;
 };
 
+// the database will not store the song parts, but the application
+// will need them for displaying different parts of songs
+// so we don't need to separate them for storage
 struct song {
-  std::vector<char> name;
-  std::vector<song_part> parts;
+  std::string name;
+  std::string body; // body of the song, verse, chorus, etc.
+  // std::vector<song_part> parts;
+  std::string progression;
 
-  // copyright info
-  std::vector<char> author, pub_company, pub_date;
+  std::string copyright_info;
 };

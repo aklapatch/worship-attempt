@@ -61,18 +61,17 @@ using namespace gl;
 #pragma comment(lib, "legacy_stdio_definitions")
 #endif
 
-static void drawTextOnImage(Cairo::RefPtr<Cairo::Context> cr, char *text,
-                            int len, double font_size) {
+static void drawTextOnImage(Cairo::RefPtr<Cairo::Context> cr, std::string text, double font_size) {
 
-  char *tmp_text = new char[len];
-  std::copy(text, text + len, tmp_text);
-
+  ///we will be altering data in tmp_text, so we will need a copy  of it
+  std::string tmp_text(text);
   double x, y;
   cr->set_font_size(font_size);
   cr->get_current_point(x, y);
   // got through and move cr down when you hit a \n
   int i = 0;
   int start = 0;
+  uintptr_t len = text.size();
   while (i < len) {
 
     if (tmp_text[i] == '\n') {
@@ -92,7 +91,6 @@ static void drawTextOnImage(Cairo::RefPtr<Cairo::Context> cr, char *text,
     char *text_ptr = &(text[start]);
     cr->show_text(text_ptr);
   }
-  delete[] tmp_text;
 }
 
 static void glfw_error_callback(int error, const char *description) {
@@ -103,7 +101,7 @@ static void showMainMenuBar() {
 
   // main menu bar
   if (ImGui::BeginMainMenuBar()) {
-    if (ImGui::BeginMenu("Schedule")) {
+    if (ImGui::BeginMenu("chedule")) {
       ImGui::MenuItem("Save");
       ImGui::MenuItem("Open");
       ImGui::MenuItem("New");
@@ -123,13 +121,13 @@ static void showMainMenuBar() {
       if (monitor_num < 2) {
         ImGui::Text("Less than 2 monitors connected, cannot project to a "
                     "second display");
-      } else {
-        while (i < monitor_num) {
+	}
+	while (i < monitor_num) {
 
-          const char *monitor_name = glfwGetMonitorName(monitors[i]);
-          ImGui::Text("%s", monitor_name);
-          ++i;
-        }
+	const char *monitor_name = glfwGetMonitorName(monitors[i]);
+	ImGui::Text("%s", monitor_name);
+	++i;
+
       }
       ImGui::EndMenu();
     }
@@ -141,106 +139,118 @@ static void showMainMenuBar() {
     // assign the text between the brackets to the name field
     // and assign what follows that (until you get to two \n in a row)
     // `
-std::vector<song_part> sepSongParts(char *f_input, uintptr_t len) {
+std::vector<song_part> sepSongParts(std::string song_text) {
 
   std::vector<song_part> output = {};
-  std::vector<char> tmp(f_input, f_input+len);
-  tmp[len] = '\0';
-  char * input = tmp.data();
-  uintptr_t input_len = len;
-  std::cerr << input_len << "\n";
+  std::string  tmp(song_text);
+  
+  uintptr_t text_len = song_text.size(); 
+  uintptr_t search_pos = 0;
 
-  char * input_end = input + input_len -1;
   // break once you hit the end
   while (true) {
     // a bracketed name should come before text otherwise
     // FIXME: this will miss text before the first title
     // FIXME: this will fail if there is a [ at EOF
-    char *part_title_start= strchr(input, '[') ;
-    std::cerr << part_title_start << "\n";
-    if (part_title_start == NULL){
+	uintptr_t title_start = song_text.find('[', search_pos);
+    std::cerr << title_start << "\n";
+    if (title_start == std::string::npos){
       return output;
     }
 
     // FIXME: this will bug out if ] is at the beginning
-    char *part_title_end = strchr(part_title_start, ']') ;
-    std::cerr << part_title_end << "\n";
-    if (part_title_end == NULL){
+    uintptr_t title_end = song_text.find(']', title_start);
+    if (title_end == std::string::npos){
       return output;
     }
-    uintptr_t diff =  part_title_end - part_title_start;
+	else{
+	  // we don't want the ] in the text of the song
+	  ++title_end;
+	  }
 
-    std::vector<char> name(diff, '_');
-    std::copy(part_title_start, part_title_end, name.data());
+    std::string name(song_text, title_start, title_end - title_start);
     
-    // find the \n\n to separate parts
-    input = part_title_end;
-    char *part_start = part_title_end;
-    char * part_end = strchr(part_start, '[');
-    if (part_end == NULL){
-      part_end = input_end; 
+    uintptr_t part_start= title_end;
+    uintptr_t part_end = song_text.find('[', part_start);
+    if (part_end == std::string::npos){
+      part_end = text_len; 
     }
-    diff = part_end - part_start;
 
-    std::vector<char> text(diff, ' ');
-    std::copy(part_start,part_end, text.data());
-    
-    // TODO: find a way to preallocate this
+	std::string text(song_text, part_start, part_end - part_start);
+
     output.push_back({name, text});
     
-    // index input
-    input = part_end;
+	// reset start serach position
+    search_pos = part_end;
   }
   
   return output;
 }
 
 // buffers for song editor
+const int copyrightbuflen = 100;
+static std::string copyrightbuf(copyrightbuflen+1, '\0' );
+
 const int lyricbuflen = 1024;
-static char lyricbuf[lyricbuflen + 1] = {};
+static std::string lyricbuf(lyricbuflen+1, '\0' );
 
 const int titlebuflen = 64;
-static char titlebuf[titlebuflen ] = {};
+static std::string titlebuf(titlebuflen+1, '\0');
 
 const int orderbuflen = 64;
-static char orderbuf[orderbuflen + 1] = {};
+static std::string orderbuf(orderbuflen+1, '\0');
 
-static bool show_nothing_msg = false;
+char db_name[] = "outtest.db";
 
+static void errPopup(const char* msg){
+}
 static void songEditor() {
   // song editor windows
   ImGui::Begin("Song Editor");
-  ImGui::InputText("Song title", titlebuf, titlebuflen);
-  ImGui::InputText("Song order", orderbuf, orderbuflen);
-  ImGui::InputTextMultiline("Song Lyrics", lyricbuf, lyricbuflen);
+  ImGui::InputText("Song title", (char*)titlebuf.data(), titlebuflen);
+  ImGui::InputText("Song order", (char*)orderbuf.data(), orderbuflen);
+  ImGui::InputTextMultiline("Song Lyrics", (char*)lyricbuf.data(), lyricbuflen);
+  ImGui::InputText("Copyright Info", (char*)copyrightbuf.data(), copyrightbuflen); 
   static int item_type = 1;
   ImGui::Combo("Background Select", &item_type, "default\0other_image\0", 2);
   if (ImGui::Button("Parse")) {
-    show_nothing_msg = true;
-    std::cerr << "229\n";
-    std::vector<song_part> song_parts = sepSongParts(lyricbuf, lyricbuflen); 
-    std::cerr << "here\n";
-    printf("%d\n", song_parts.size() );
-    for (auto x: song_parts){
+	
+	// prep a song struct to store
+  }
+ImGui::SameLine();
+	bool save_err = false;
+  if (ImGui::Button("Save")) {
+	// check if the fields are blank first
+	// only the copyright field can be blank
 
-      x.name.push_back('\0');
-      x.text.push_back('\0');
-    char * name  = x.name.data();
-    char * text  = x.text.data();
-    std::cerr << "title = " << name << "\n";
-    std::cerr << "text = " << text << "\n";
-    }
-    }
+	song song_to_save;
+	song_to_save.name = titlebuf.c_str();
+	song_to_save.body = lyricbuf.c_str(); 
+	song_to_save.progression = orderbuf.c_str();
+	song_to_save.copyright_info = copyrightbuf.c_str();
+	
+	if(song_to_save.name.size() == 0){
+	  // TODO: if the compiler optimizes this out, this may not work
+	  save_err = true;
+	}
+	else{
+	  std::cerr << "saving\n";
+	  saveSong(song_to_save, db_name);
+	}
+  }
+		if(save_err){
+			ImGui::OpenPopup("err");
+		}
+		if(ImGui::BeginPopup("err")){
+			ImGui::Text("Error:");
+			ImGui::Text("Please input a song title");
+			ImGui::EndPopup();
+		}
 
-
- 
   ImGui::End();
 }
 
 int main(int, char **) {
-    orderbuf[orderbuflen] = '\0';
-    titlebuf[titlebuflen ] = '\0';
-    lyricbuf[lyricbuflen ] = '\0';
   // Setup window
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit())
@@ -353,7 +363,7 @@ int main(int, char **) {
 
   // try executing sqlite commands
   sqlite3 *main_db;
-  int sq_err = init_and_open_db("outtest.db", &main_db);
+  init_and_open_db(db_name, &main_db);
   sqlite3_close(main_db);
 
   // Load Fonts
@@ -401,9 +411,9 @@ int main(int, char **) {
   sched_song_list.push_back(list[0]);
 
   const int word_buf_size = 200;
-  static char song_word_buf[word_buf_size];
+  static std::string song_word_buf(word_buf_size+1, '\0');
 
-  static char tmp_word_buf[word_buf_size];
+  static std::string tmp_word_buf(word_buf_size+1, '\0');
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {
@@ -492,9 +502,7 @@ int main(int, char **) {
     // when the user searches, the results will have to be populated into a
     // special string type that holds the results. then the result will pull the
     // song name out of a hash table or somthing, and edit that song.
-    static int song_num = 1;
-    static int drag_num = 1;
-    static bool ret = false;
+	static int song_num;
     ImGui::ListBox("Song List", &song_num, all_song_list.data(),
                    all_song_list.size());
     for (int j = 0; j < IM_ARRAYSIZE(io.MouseDown); ++j) {
@@ -515,7 +523,7 @@ int main(int, char **) {
     songEditor();
 
     ImGui::Begin("img_test");
-    ImGui::InputTextMultiline("word input", song_word_buf, word_buf_size);
+    ImGui::InputTextMultiline("word input", (char*)song_word_buf.data(), word_buf_size);
     static int font_size = 10;
     ImGui::InputInt("font size", &font_size);
     // write text on image and do all the things you need to do to show it.
@@ -530,16 +538,12 @@ int main(int, char **) {
     cr->move_to(50, 100);
     cr->set_font_face(font);
     cr->set_font_size(font_size);
-    drawTextOnImage(cr, song_word_buf, word_buf_size, font_size);
+    drawTextOnImage(cr, song_word_buf, font_size);
 
     // TODO: during the copy, check if something is different, and if it is,
     // updated the texture.
 
     // go through the image and separate the \n bits into separate strings.
-    static int i = 0;
-    static int start = 0;
-    static bool replace = false;
-    static int num = 0;
     std::copy(surf->get_data(),
               surf->get_data() + (orig_image.rows * orig_image.cols * 4),
               tmp_image.data);
