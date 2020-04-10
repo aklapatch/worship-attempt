@@ -2,6 +2,8 @@
 #include<sstream>
 #include <sqlite3.h>
 #include <stdlib.h>
+#include<string.h>
+#include<stdio.h>
 #include "structs.h"
 
 static int callback(void *notUsed, int argc, char **argv, char **colname) {
@@ -46,14 +48,7 @@ int init_and_open_db(char *fname, sqlite3 **out_db) {
   }
 
   const char *song_sql_command =
-      "create table if not exists songs("
-      "title TEXT,"
-      "body TEXT,"
-      "progression TEXT,"
-      "background_id INTEGER, "
-	  "copyright_info TEXT,"
-      "FOREIGN KEY(background_id) REFERENCES pictures(id)"
-      ");";
+      "CREATE TABLE if not exists songs(title TEXT PRIMARY KEY,body TEXT,progression TEXT,background_id INTEGER, copyright_info TEXT);";
   std::cout << song_sql_command << "\n";
   rc = sqlite3_exec(*out_db, song_sql_command, callback, 0, &errmsg);
   if (rc != SQLITE_OK) {
@@ -64,9 +59,7 @@ int init_and_open_db(char *fname, sqlite3 **out_db) {
   const char *sched_song_link_sql_cmd =
       "create table if not exists sched_song_links("
       "song_id INTEGER,"
-      "sched_id INTEGER,"
-      "FOREIGN KEY(song_id) REFERENCES songs(id),"
-      "FOREIGN KEY(sched_id) REFERENCES schedules(id)"
+      "sched_id INTEGER"
       ");";
   rc = sqlite3_exec(*out_db, sched_song_link_sql_cmd, callback, 0, &errmsg);
   if (rc != SQLITE_OK) {
@@ -76,15 +69,6 @@ int init_and_open_db(char *fname, sqlite3 **out_db) {
   }
   return 0;
 }
-/*
-      "id INTEGER PRIMARY KEY ASC,"
-      "title TEXT,"
-      "body TEXT,"
-      "progression TEXT,"
-      "background_id INTEGER, "
-	  "copyright_info TEXT,"
-      "FOREIGN KEY(background_id) REFERENCES pictures(id)"
-	  */
 // opens the db and saves the song to it.
 int saveSong(song input_song, char * db_name){
   
@@ -100,35 +84,29 @@ int saveSong(song input_song, char * db_name){
   //convert values to one sql query 
   std::stringstream ss;
   
-  ss << "insert or replace into songs values(";
+  ss << "insert into songs VALUES('";
   
+  // you have to use the c_str() function otherwise sqlite will complain that
+  // there is an invalid token that you cannot see.
   // the caller of this function makes sure that there is a name
-  ss << "'" <<  input_song.name << "',"; 
+  ss << input_song.name.c_str()<< "','"; 
 
-  if (input_song.body.size() == 0){
-	ss << "'" <<  input_song.body << "'";
-  }
-  else {
-	ss << "NULL";
-  }
-  ss << ",";
-
-  // TODO: add song bacground storage of some sort
-  if (input_song.progression.size() == 0){
-	ss << "'"<<  input_song.progression << "'";
-  }
-  else {
-	ss << "NULL";
-  }
-  ss << ",NULL,";
+  std::cerr << "size = " << input_song.body.size() << "\n"; 
+  std::cerr << "body = " << input_song.body << "\n"; 
+	ss << input_song.body.c_str() << "','";
   
-  if (input_song.copyright_info.size() == 0){
-	ss << "'" <<  input_song.copyright_info << "'";
-  }
-  else {
-	ss << "NULL";
-  }
-  ss <<");";
+  // TODO: add song bacground storage of some sort
+  std::cerr << "size = " << input_song.progression.size() << "\n"; 
+	ss << input_song.progression.c_str();
+
+  ss << "',NULL,'";
+  
+	ss << input_song.copyright_info.c_str();
+  ss <<"') on conflict (title) do update set "
+"body=excluded.body,"
+"progression=excluded.progression,"
+"background_id=excluded.background_id,"
+"copyright_info=excluded.copyright_info;";
 
   std::string sql = ss.str();
   std::cerr << "sql insert = " << sql << "\n";
@@ -146,3 +124,56 @@ int saveSong(song input_song, char * db_name){
   return 0;
 }
   
+// store all the data into all_songs
+static int storeCallback(void * data, int argc, char **argv, char **colname){
+  std::vector<song> *data_vec = (std::vector<song>*)data;
+  
+  // there should be 6 items:
+  // title, body, progression, background_id, copyright_info, rowid
+  // order in db:
+  // rowid
+  // - title
+  // -body
+  // - progression
+  // - background_id
+  // copyright_info
+  
+  // we can change the order in the query if necessary
+  song tmp;
+  tmp.id =  atoi(argv[0]);
+  tmp.background_id = atoi(argv[4]);
+  tmp.name = argv[1];
+  tmp.body = argv[2];
+  tmp.progression = argv[3];
+  tmp.copyright_info = argv[5];
+  
+  data_vec->push_back(tmp);
+
+  return 0;
+}
+
+// this assumes the db is open
+int readSongs(sqlite3 * db, std::vector<song>& all_songs, std::vector<char*>& song_names){
+
+  const char * query = "select rowid,* from songs;";
+	char * err;
+  if (sqlite3_exec(db, query, storeCallback, (void*)&all_songs, &err) != SQLITE_OK){
+	std::cerr << "SQL Error at " << __LINE__ <<  ": " << err <<  "\n";
+	sqlite3_free(err);
+	return 1;
+
+  }
+
+  song_names.resize(all_songs.size());
+
+  // populate song names
+  // FIXME: this is pretty dangerous, we should probably allocate 
+  // each char * and then copy, but the all_songs should not need to reallocate unless there is a save to the db
+  // in  that case, we can just reassociate the two items.
+  int end = all_songs.size();
+  for(int i = 0; i <end; ++i){
+	song_names[i] = (char*)all_songs[i].name.data();
+  }
+
+  return 0;
+}

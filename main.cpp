@@ -192,27 +192,27 @@ const int copyrightbuflen = 100;
 static std::string copyrightbuf(copyrightbuflen+1, '\0' );
 
 const int lyricbuflen = 1024;
-static std::string lyricbuf(lyricbuflen+1, '\0' );
+static std::string lyricbuf(lyricbuflen, '\0' );
 
 const int titlebuflen = 64;
-static std::string titlebuf(titlebuflen+1, '\0');
+static std::string titlebuf(titlebuflen, '\0');
 
 const int orderbuflen = 64;
-static std::string orderbuf(orderbuflen+1, '\0');
+static std::string orderbuf(orderbuflen, '\0');
 
 char db_name[] = "outtest.db";
 
 static void errPopup(const char* msg){
 }
-static void songEditor() {
+static bool songEditor() {
   // song editor windows
-  ImGui::Begin("Song Editor");
-  ImGui::InputText("Song title", (char*)titlebuf.data(), titlebuflen);
-  ImGui::InputText("Song order", (char*)orderbuf.data(), orderbuflen);
-  ImGui::InputTextMultiline("Song Lyrics", (char*)lyricbuf.data(), lyricbuflen);
-  ImGui::InputText("Copyright Info", (char*)copyrightbuf.data(), copyrightbuflen); 
+  ImGui::InputText("Song title", (char*)titlebuf.c_str(), titlebuflen);
+  ImGui::InputText("Song order", (char*)orderbuf.c_str(), orderbuflen);
+  ImGui::InputTextMultiline("Song Lyrics", (char*)lyricbuf.c_str(), lyricbuflen);
+  ImGui::InputText("Copyright Info", (char*)copyrightbuf.c_str(), copyrightbuflen); 
   static int item_type = 1;
   ImGui::Combo("Background Select", &item_type, "default\0other_image\0", 2);
+	bool reload_songs = false;
   if (ImGui::Button("Parse")) {
 	
 	// prep a song struct to store
@@ -224,10 +224,10 @@ ImGui::SameLine();
 	// only the copyright field can be blank
 
 	song song_to_save;
-	song_to_save.name = titlebuf.c_str();
-	song_to_save.body = lyricbuf.c_str(); 
-	song_to_save.progression = orderbuf.c_str();
-	song_to_save.copyright_info = copyrightbuf.c_str();
+	song_to_save.name = titlebuf;
+	song_to_save.body = lyricbuf; 
+	song_to_save.progression = orderbuf;
+	song_to_save.copyright_info = copyrightbuf;
 	
 	if(song_to_save.name.size() == 0){
 	  // TODO: if the compiler optimizes this out, this may not work
@@ -236,6 +236,7 @@ ImGui::SameLine();
 	else{
 	  std::cerr << "saving\n";
 	  saveSong(song_to_save, db_name);
+	  reload_songs = true;
 	}
   }
 		if(save_err){
@@ -246,8 +247,112 @@ ImGui::SameLine();
 			ImGui::Text("Please input a song title");
 			ImGui::EndPopup();
 		}
+		return reload_songs;
+}
 
+const uint32_t title_buf_len = 200;
+static std::string title_buf(title_buf_len+1, '\0');
+
+const uint32_t lyric_buf_len = 200;
+static std::string lyric_buf(lyric_buf_len+1, '\0');
+
+static auto vector_getter(void* vec, int idx, const char ** out_text)
+{
+  std::vector<std::string> *vec_ptr = (std::vector<std::string>*)vec;
+  if (idx < 0 || idx >= vec_ptr->size()){return false;}
+  *out_text = vec_ptr->at(idx).c_str();
+  return true;
+}
+
+static void scheduleBuilder(std::vector<song> all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
+
+  
+  ImGuiIO &io = ImGui::GetIO();
+  (void)io;
+	// need a songlist/order
+	// need to implement a draggable menu for that
+	//
+	// this code is pulled from the imgui example code here:
+	// https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
+	// sched_song_list
+	//
+	// FIXME, this does not work when sched_song_list has any items in item
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
+	//ImGui::BeginChild("sched_ch", ImVec2(0,0), true, window_flags);
+	int end = sched_songs.size();
+	for (int n = 0; n < end; ++n) {
+	  song item = sched_songs[n];
+	  ImGui::Selectable(sched_songs[n].name.c_str());
+
+	  if (ImGui::IsItemActive() && !ImGui::IsItemHovered()) {
+		int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
+		if (n_next >= 0 && n_next < sched_songs.size()) {
+		  sched_songs[n] = sched_songs[n_next];
+		  sched_songs[n_next] = item;
+		  ImGui::ResetMouseDragDelta();
+		}
+	  }
+	  if (ImGui::IsKeyReleased(261) && ImGui::IsItemHovered()) {
+
+		// if a user presses delete when they are hovering over a song, delete
+		// it.
+		sched_songs.erase(sched_songs.begin() + n);
+	  }
+	}
+	//ImGui::EndChild();
+
+	ImGui::InputText("Song Title", (char*)title_buf.c_str(),title_buf_len);
+	ImGui::InputText("Song Lyrics", (char*)lyric_buf.c_str(), lyric_buf_len);
+
+	// when the user searches, the results will have to be populated into a
+	// special string type that holds the results. then the result will pull the
+	// song name out of a hash table or somthing, and edit that song.
+	ImGui::Separator();
+	ImGui::Text(
+				"Double click a song in the list to add it, \nand hover over a song "
+				"and hit the delete key to remove a song from the schedule.");
+	ImGui::Separator();
+	ImGui::Text("All Songs");
+	ImGui::Separator();
+	ImGui::BeginChild("songch",ImVec2(0,0), true, window_flags );
+	int size = all_songs.size();
+	for(int i = 0; i < size; ++i){
+	  // only draw members that match the title.
+	  if(all_songs[i].name.find(title_buf.c_str()) <= 1){
+
+		ImGui::Selectable(all_songs[i].name.c_str());
+		if (ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemActive()
+			&& ImGui::IsItemHovered()){
+			sched_songs.push_back(all_songs[i]);
+		}
+	}
+	}
+	ImGui::EndChild();
+}
+
+static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
+
+  ImGui::Begin("Schedule");
+  ImGui::BeginChild("ChildL", ImVec2(ImGui::GetWindowContentRegionWidth()*0.5f,0), true);
+  bool reload_songs = songEditor(); 
+  ImGui::EndChild();
+  
+  if(reload_songs){
+	all_songs.clear();
+	std::cerr << "reloading songs" << "\n";
+	sqlite3 *tmp_db;
+	sqlite3_open(db_name, &tmp_db);
+	readSongs(tmp_db, all_songs, song_names);
+	sqlite3_close(tmp_db);
+  }
+
+  ImGui::SameLine();
+  ImGui::BeginChild("ChildR", ImVec2(0,0), true);
+  scheduleBuilder(all_songs , sched_songs,song_names);
+  ImGui::EndChild();
+  
   ImGui::End();
+
 }
 
 int main(int, char **) {
@@ -307,9 +412,6 @@ int main(int, char **) {
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
-  // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable
-  // Keyboard Controls io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; //
-  // Enable Gamepad Controls
 
   // Setup Dear ImGui style
 
@@ -364,6 +466,10 @@ int main(int, char **) {
   // try executing sqlite commands
   sqlite3 *main_db;
   init_and_open_db(db_name, &main_db);
+  
+  std::vector<song> all_song_list, sched_song_list;
+  std::vector<char*> song_names;
+  readSongs(main_db, all_song_list, song_names);
   sqlite3_close(main_db);
 
   // Load Fonts
@@ -395,22 +501,7 @@ int main(int, char **) {
   bool show_another_window = false;
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-  const int title_searchbuf_len = 64;
-  char title_searchbuf[title_searchbuf_len + 1] = {};
-
-  const int lyric_searchbuf_len = 64;
-  char lyric_searchbuf[title_searchbuf_len + 1] = {};
-
-
-  const char *list[] = {"song1\0", "song2\0", "song3\0"};
-
-  std::vector<const char *> sched_song_list = {}, all_song_list = {};
-  all_song_list.push_back(list[0]);
-  all_song_list.push_back(list[1]);
-  all_song_list.push_back(list[2]);
-  sched_song_list.push_back(list[0]);
-
-  const int word_buf_size = 200;
+  static uint32_t word_buf_size = 512;
   static std::string song_word_buf(word_buf_size+1, '\0');
 
   static std::string tmp_word_buf(word_buf_size+1, '\0');
@@ -435,92 +526,8 @@ int main(int, char **) {
 
     showMainMenuBar();
     ImGuiIO &io = ImGui::GetIO();
-    /*
-       ImGui::Begin("Song selector");
-       ImGui::InputText("Song Title", title_searchbuf, title_searchbuf_len);
-       ImGui::InputText("Song Lyrics", lyric_searchbuf, lyric_searchbuf_len);
 
-    // when the user searches, the results will have to be populated into a
-    special string type that holds the results.
-    // then the result will pull the song name out of a hash table or somthing,
-    and edit that song. static int song_num = 1; static bool ret = false;
-
-    const char *items[] = {"song", "song1", "song2"};
-    ImGui::ListBox("Song List",&song_num,items, IM_ARRAYSIZE(items),
-    IM_ARRAYSIZE(items) );
-
-    if (ImGui::Button("Search (does not work)")){
-    }
-
-
-
-    ImGui::End();
-    */
-
-    ImGui::Begin("Schedule Builder");
-    // need a songlist/order
-    // need to implement a draggable menu for that
-    //
-    // this code is pulled from the imgui example code here:
-    // https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp
-    // sched_song_list
-    //
-    // FIXME, this does not work when sched_song_list has any items in item
-    // the selectable function segfaults
-    for (int n = 0; n < sched_song_list.size(); n++) {
-      const char *item = sched_song_list[n];
-      ImGui::Selectable(sched_song_list[n]);
-
-      if (ImGui::IsItemActive() && !ImGui::IsItemHovered()) {
-        int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
-        if (n_next >= 0 && n_next < sched_song_list.size()) {
-          sched_song_list[n] = sched_song_list[n_next];
-          sched_song_list[n_next] = item;
-          ImGui::ResetMouseDragDelta();
-        }
-      }
-      if (ImGui::IsKeyReleased(261) && ImGui::IsItemHovered()) {
-
-        // if a user presses delete when they are hovering over a song, delete
-        // it.
-        sched_song_list.erase(sched_song_list.begin() + n);
-      }
-    }
-
-    /*
-       if (ImGui::Button("add song")){
-
-       }
-       if (ImGui::Button("remove song")){
-
-       }
-       */
-    ImGui::Separator();
-    ImGui::InputText("Song Title", title_searchbuf, title_searchbuf_len);
-    ImGui::InputText("Song Lyrics", lyric_searchbuf, lyric_searchbuf_len);
-
-    // when the user searches, the results will have to be populated into a
-    // special string type that holds the results. then the result will pull the
-    // song name out of a hash table or somthing, and edit that song.
-	static int song_num;
-    ImGui::ListBox("Song List", &song_num, all_song_list.data(),
-                   all_song_list.size());
-    for (int j = 0; j < IM_ARRAYSIZE(io.MouseDown); ++j) {
-
-      if (ImGui::IsMouseDoubleClicked(j) && ImGui::IsItemHovered()) {
-        sched_song_list.push_back(all_song_list[song_num]);
-      }
-    }
-
-    ImGui::Text(
-        "Double click a song in the list to add it, \nand hover over a song "
-        "and hit the delete key to remove a song from the schedule.");
-
-    // schedule name box(probably not necessary)
-    //
-    ImGui::End(); // sched builder
-
-    songEditor();
+	schedSongUnit(all_song_list,sched_song_list, song_names );
 
     ImGui::Begin("img_test");
     ImGui::InputTextMultiline("word input", (char*)song_word_buf.data(), word_buf_size);
