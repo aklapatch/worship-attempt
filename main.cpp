@@ -135,61 +135,114 @@ static void showMainMenuBar() {
   }
 }
 
+// this does not caputer antying before start_pos
+std::vector<song_part> sepTitleParts(std::string text, uint32_t start_pos){
+  
+  std::vector<song_part> output;
+  uintptr_t text_len = text.size();
+  uintptr_t title_start, title_end, search_pos, end_pos;
+  title_start = title_end = search_pos = end_pos = 0;
+  while(end_pos < text_len){
+	title_start = text.find('[', search_pos);
+	if (title_start == std::string::npos){
+	  // get the rest of the text and return
+	  std::string name = "";
+	  output.push_back({name, std::string(text, search_pos, text_len - search_pos)});
+	  return output;
+					   
+	}
+	
+	title_end = text.find(']', title_start);
+	if (title_end == std::string::npos){
+	  std::cerr << "Error parsing song part\n";
+	  std::cerr << "Rest of part was:\n";
+	  std::cerr << text.substr(title_start, text_len - title_start);
+	  std::cerr << "\n";
+	  return output;	
+	}
+	std::string title = text.substr(title_start, title_end - title_start);
+	
+	// go until next '['
+	// FIXME: possible segfault
+	search_pos = title_end;
+	end_pos = text.find('[', search_pos);
+	if (end_pos == std::string::npos){
+	  end_pos = text_len;
+	}
+	std::string text_part = text.substr(search_pos, end_pos - search_pos);
+	
+	output.push_back({title, text_part});
+	search_pos = end_pos;
+	}
+  return output;
+}
+
+bool isSpace(std::string input){
+  uint32_t size = 0;
+  for(auto x: input){
+	if (x == ' ' || x == '\t' || x == '\n' || x == '\r'){
+	  ++size;
+	}
+	}
+  return size == input.size();
+  }
     // this algorithm should find brackets [ ] and
     // assign the text between the brackets to the name field
     // and assign what follows that (until you get to two \n in a row)
-    // `
+// if you don't find [], then you can make unnamed parts with empty strings
+// for names 
 std::vector<song_part> sepSongParts(std::string song_text) {
 
   std::vector<song_part> output = {};
-  std::string  tmp(song_text);
   
+  // first separate all the \n\n speparated paragraphs, and then
+  // pull the names out of all those buffers.
+  
+
+  // pull the \n\n separations out
+  std::vector<std::string> separate_bufs = {};
+  uintptr_t start_pos = 0;
+  uintptr_t end_pos = 0;
   uintptr_t text_len = song_text.size(); 
-  uintptr_t search_pos = 0;
+  // FIXME? : if end_pos is == songtext.size, then it might be a buffer
+  // overrun when makeing the substring for separate_bufs
+  while(end_pos < text_len) {
+	end_pos = song_text.find("\n\n", start_pos);
+	if (end_pos == std::string::npos){
 
-  // break once you hit the end
-  while (true) {
-    // a bracketed name should come before text otherwise
-    // FIXME: this will miss text before the first title
-    // FIXME: this will fail if there is a [ at EOF
-	uintptr_t title_start = song_text.find('[', search_pos);
-    std::cerr << title_start << "\n";
-    if (title_start == std::string::npos){
-      return output;
-    }
+		// grab the whole thing in this case
+		end_pos = text_len; 
+	}
+	separate_bufs.push_back( std::string(song_text, start_pos, end_pos - start_pos)); 
 
-    // FIXME: this will bug out if ] is at the beginning
-    uintptr_t title_end = song_text.find(']', title_start);
-    if (title_end == std::string::npos){
-      return output;
-    }
-	else{
-	  // we don't want the ] in the text of the song
-	  ++title_end;
-	  }
-
-    std::string name(song_text, title_start, title_end - title_start);
-    
-    uintptr_t part_start= title_end;
-    uintptr_t part_end = song_text.find('[', part_start);
-    if (part_end == std::string::npos){
-      part_end = text_len; 
-    }
-
-	std::string text(song_text, part_start, part_end - part_start);
-
-    output.push_back({name, text});
-    
-	// reset start serach position
-    search_pos = part_end;
-  }
+	}
   
+  // second phase, turn the bufs into song_parts 
+  // assign blank names to the ones without [names]
+  uint32_t num_parts = separate_bufs.size();
+  start_pos = 0;
+  end_pos = 0;
+  uint32_t title_start = 0;
+  uint32_t title_end = 0;
+  for(uint32_t i = 0; i< num_parts; ++i){
+	title_start = separate_bufs[i].find('[', start_pos);
+	
+	// capture whatever was before the title if there is anything important
+	// insert a function here or something
+
+		
+		  
+
+
+
+  }
+
   return output;
 }
 
 // buffers for song editor
 const int copyrightbuflen = 100;
-static std::string copyrightbuf(copyrightbuflen+1, '\0' );
+static std::string copyrightbuf(copyrightbuflen, '\0' );
 
 const int lyricbuflen = 1024;
 static std::string lyricbuf(lyricbuflen, '\0' );
@@ -264,7 +317,7 @@ static auto vector_getter(void* vec, int idx, const char ** out_text)
   return true;
 }
 
-static void scheduleBuilder(std::vector<song> all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
+static uint32_t scheduleBuilder(std::vector<song> all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
 
   
   ImGuiIO &io = ImGui::GetIO();
@@ -277,14 +330,54 @@ static void scheduleBuilder(std::vector<song> all_songs , std::vector<song>& sch
 	// sched_song_list
 	//
 	// FIXME, this does not work when sched_song_list has any items in item
+
+	ImGui::InputText("Song Title", (char*)title_buf.c_str(),title_buf_len);
+	ImGui::InputText("Song Lyrics", (char*)lyric_buf.c_str(), lyric_buf_len);
+
+	// when the user searches, the results will have to be populated into a
+	// special string type that holds the results. then the result will pull the
+	// song name out of a hash table or somthing, and edit that song.
+	ImGui::Separator();
+	ImGui::Text(
+				"Double click a song in the list to add it, \nand hover over a song "
+				"and hit the delete key to remove a song from the schedule.");
+
+	ImGui::Separator();
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
-	//ImGui::BeginChild("sched_ch", ImVec2(0,0), true, window_flags);
+	
+	ImGui::BeginChild("songch",ImVec2(ImGui::GetWindowContentRegionWidth()*0.5f, 0), true, window_flags );
+	ImGui::Text("All Songs");
+
+	ImGui::Separator();
+	int size = all_songs.size();
+	for(int i = 0; i < size; ++i){
+	  // only draw members that match the title.
+	  if(all_songs[i].name.find(title_buf.c_str()) <= 1){
+
+		ImGui::Selectable(all_songs[i].name.c_str());
+		if (ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemActive()
+			&& ImGui::IsItemHovered()){
+			sched_songs.push_back(all_songs[i]);
+		}
+	}
+	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+	ImGui::BeginChild("sched_ch", ImVec2(0,300), true, window_flags);
+	ImGui::Text("Schedule_songs");
+	ImGui::Separator();
 	int end = sched_songs.size();
+	static int32_t selected_num = -1;
 	for (int n = 0; n < end; ++n) {
 	  song item = sched_songs[n];
-	  ImGui::Selectable(sched_songs[n].name.c_str());
+
+	  if(ImGui::Selectable(sched_songs[n].name.c_str(), selected_num == n)){
+		selected_num = n;
+	  }
 
 	  if (ImGui::IsItemActive() && !ImGui::IsItemHovered()) {
+		selected_num = -1;
 		int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
 		if (n_next >= 0 && n_next < sched_songs.size()) {
 		  sched_songs[n] = sched_songs[n_next];
@@ -299,41 +392,14 @@ static void scheduleBuilder(std::vector<song> all_songs , std::vector<song>& sch
 		sched_songs.erase(sched_songs.begin() + n);
 	  }
 	}
-	//ImGui::EndChild();
-
-	ImGui::InputText("Song Title", (char*)title_buf.c_str(),title_buf_len);
-	ImGui::InputText("Song Lyrics", (char*)lyric_buf.c_str(), lyric_buf_len);
-
-	// when the user searches, the results will have to be populated into a
-	// special string type that holds the results. then the result will pull the
-	// song name out of a hash table or somthing, and edit that song.
-	ImGui::Separator();
-	ImGui::Text(
-				"Double click a song in the list to add it, \nand hover over a song "
-				"and hit the delete key to remove a song from the schedule.");
-	ImGui::Separator();
-	ImGui::Text("All Songs");
-	ImGui::Separator();
-	ImGui::BeginChild("songch",ImVec2(0,0), true, window_flags );
-	int size = all_songs.size();
-	for(int i = 0; i < size; ++i){
-	  // only draw members that match the title.
-	  if(all_songs[i].name.find(title_buf.c_str()) <= 1){
-
-		ImGui::Selectable(all_songs[i].name.c_str());
-		if (ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemActive()
-			&& ImGui::IsItemHovered()){
-			sched_songs.push_back(all_songs[i]);
-		}
-	}
-	}
 	ImGui::EndChild();
+	return selected_num;
 }
 
 static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
 
   ImGui::Begin("Schedule");
-  ImGui::BeginChild("ChildL", ImVec2(ImGui::GetWindowContentRegionWidth()*0.5f,0), true);
+  ImGui::BeginChild("ChildL", ImVec2(ImGui::GetWindowContentRegionWidth()*0.5f,400), true);
   bool reload_songs = songEditor(); 
   ImGui::EndChild();
   
@@ -347,12 +413,27 @@ static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sche
   }
 
   ImGui::SameLine();
-  ImGui::BeginChild("ChildR", ImVec2(0,0), true);
-  scheduleBuilder(all_songs , sched_songs,song_names);
+  ImGui::BeginChild("ChildR", ImVec2(0,400), true);
+  int32_t selected_song_num = scheduleBuilder(all_songs , sched_songs,song_names);
   ImGui::EndChild();
   
-  ImGui::End();
+  
 
+  ImGui::Text("Rendered_song");
+  // separate the song's parts and draw them as different boxes to click on
+  // TODO: optimize this so that it does not recopy the song every time.
+  if ( selected_song_num >= 0){
+  song curr_song = sched_songs[selected_song_num];
+  
+  // TODO: get stuff and do stuff with it.
+  // separate song parts into verses that are labeled with teh proper sytnax
+  // lay them all out as buttons with the proper labes (from the titles taht they were given
+  // I still need to associate the verses and stuff with progression.
+  }
+
+
+  ImGui::End(); // Schedule
+  
 }
 
 int main(int, char **) {
@@ -527,7 +608,8 @@ int main(int, char **) {
     showMainMenuBar();
     ImGuiIO &io = ImGui::GetIO();
 
-	schedSongUnit(all_song_list,sched_song_list, song_names );
+	// I tried to make this return an int32_t and then the window failed to draw
+	 schedSongUnit(all_song_list,sched_song_list, song_names );
 
     ImGui::Begin("img_test");
     ImGui::InputTextMultiline("word input", (char*)song_word_buf.data(), word_buf_size);

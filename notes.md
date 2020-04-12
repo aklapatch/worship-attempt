@@ -14,7 +14,20 @@
   that should alleviate a lot of copies
 - consolidate sql queries (into one query where possible)
 - get size of song table to preallocate all_songs vector (may not be faster, since the extra file I/O may be slower than using push_back a lot.
-- 
+
+## TODO: bugs 
+- the menu where you move songs around glitches out and some songs move on their own sometimes.
+
+## ui notes
+- I still need to figure out which window placement is best. 
+- I need:
+  - list of all songs
+  - lsit of current shedule songs
+  - search dialog (connected to list of all songs)
+  - preview window for the song (with a way to select the versese and display their text
+  - song text editor, place to update the song and re-save it.
+  - that hot editing should affect only the schedule copy of the song, but the 'save' button will make it save to the databse.
+  - saving the schedule will save the changes that you made to the schedule-songs, but to a separate file.
 
 ## database design (SQLITE)
 - songs table
