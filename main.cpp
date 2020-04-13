@@ -144,10 +144,11 @@ std::vector<song_part> sepTitleParts(std::string text, uint32_t start_pos){
   title_start = title_end = search_pos = end_pos = 0;
   while(end_pos < text_len){
 	title_start = text.find('[', search_pos);
+	// TODO: emit a parsing error if you find a ']'
 	if (title_start == std::string::npos){
+
 	  // get the rest of the text and return
-	  std::string name = "";
-	  output.push_back({name, std::string(text, search_pos, text_len - search_pos)});
+	  output.push_back({"", text.substr(search_pos, text_len - search_pos)});
 	  return output;
 					   
 	}
@@ -160,6 +161,10 @@ std::vector<song_part> sepTitleParts(std::string text, uint32_t start_pos){
 	  std::cerr << "\n";
 	  return output;	
 	}
+	// try to avoid overrunning the vector
+	if (title_end < text_len -1){
+	  ++title_end;
+	  }
 	std::string title = text.substr(title_start, title_end - title_start);
 	
 	// go until next '['
@@ -183,9 +188,9 @@ bool isSpace(std::string input){
 	if (x == ' ' || x == '\t' || x == '\n' || x == '\r'){
 	  ++size;
 	}
-	}
-  return size == input.size();
   }
+  return size == input.size();
+}
     // this algorithm should find brackets [ ] and
     // assign the text between the brackets to the name field
     // and assign what follows that (until you get to two \n in a row)
@@ -197,7 +202,6 @@ std::vector<song_part> sepSongParts(std::string song_text) {
   
   // first separate all the \n\n speparated paragraphs, and then
   // pull the names out of all those buffers.
-  
 
   // pull the \n\n separations out
   std::vector<std::string> separate_bufs = {};
@@ -213,7 +217,8 @@ std::vector<song_part> sepSongParts(std::string song_text) {
 		// grab the whole thing in this case
 		end_pos = text_len; 
 	}
-	separate_bufs.push_back( std::string(song_text, start_pos, end_pos - start_pos)); 
+	separate_bufs.push_back( song_text.substr( start_pos, end_pos - start_pos)); 
+	start_pos = end_pos+1;
 
 	}
   
@@ -224,17 +229,13 @@ std::vector<song_part> sepSongParts(std::string song_text) {
   end_pos = 0;
   uint32_t title_start = 0;
   uint32_t title_end = 0;
+  std::vector<song_part> tmp;
+  std::vector<song_part>::iterator it;
   for(uint32_t i = 0; i< num_parts; ++i){
-	title_start = separate_bufs[i].find('[', start_pos);
+	tmp = sepTitleParts(separate_bufs[i], 0);
+	it = output.end();
+	output.insert(it, tmp.begin(), tmp.end());
 	
-	// capture whatever was before the title if there is anything important
-	// insert a function here or something
-
-		
-		  
-
-
-
   }
 
   return output;
@@ -282,7 +283,9 @@ ImGui::SameLine();
 	song_to_save.progression = orderbuf;
 	song_to_save.copyright_info = copyrightbuf;
 	
-	if(song_to_save.name.size() == 0){
+	// TODO: this does not work anymore (string is pre-allocated, 
+	// may need to use strlen
+	if( strlen(song_to_save.name.c_str()) == 0){
 	  // TODO: if the compiler optimizes this out, this may not work
 	  save_err = true;
 	}
@@ -415,6 +418,19 @@ static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sche
   ImGui::SameLine();
   ImGui::BeginChild("ChildR", ImVec2(0,400), true);
   int32_t selected_song_num = scheduleBuilder(all_songs , sched_songs,song_names);
+  static int32_t prev_song_num;
+  if (prev_song_num != selected_song_num && selected_song_num >= 0){
+	// print out the separated song parts
+	std::cerr << "Songs's contents = \n";
+	std::cerr << sched_songs[selected_song_num].body << "\n";
+	std::vector<song_part> parts = sepSongParts(sched_songs[selected_song_num].body);
+	for (auto x: parts){
+	  std::cerr << "title = " << x.name << "\n";
+	  std::cerr << "text = " << x.text << "\n";
+	  }
+
+	}
+  prev_song_num = selected_song_num;
   ImGui::EndChild();
   
   

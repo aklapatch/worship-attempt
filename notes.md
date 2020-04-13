@@ -53,6 +53,8 @@
     - data (png, jpg data)
 
 - schedule (for songs)
+  	- font_size?
+	- font_style? (bold, semi-bold, shadow, etc) (enums probably)
     - id
 
 - sched-song-link

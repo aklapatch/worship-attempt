@@ -78,8 +78,8 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 	CFLAGS = $(CXXFLAGS)
 endif
 
-# add opencv stuff
-CXXFLAGS+= `pkg-config --cflags opencv4` `pkg-config --cflags cairomm-1.0`
+# add libraries + custom flags
+CXXFLAGS+= `pkg-config --cflags opencv4` `pkg-config --cflags cairomm-1.0` -Og
 LIBS+= `pkg-config --libs opencv4` `pkg-config --libs cairomm-1.0`
 
 ##---------------------------------------------------------------------
