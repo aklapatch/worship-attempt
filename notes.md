@@ -17,6 +17,14 @@
 
 ## TODO: bugs 
 - the menu where you move songs around glitches out and some songs move on their own sometimes.
+- songs in the schedule section, if there are duplicates, selecting the duplicate fails to have the song titles show up in the selection dialog boxes
+ - RELATED ^^^ : I cannot select duplicates in the schedule songs dialog (not sure why);
+ - when you save a song, the schedule song list does not update with the new song (this is expected, since we copy those songs
+ 	- however, the bug regarding selecting duplicates still exists
+	
+## TODO: usability
+- warnings ifa  song is not formatted correctly
+- warnings if a song is being overwritten (name collision)
 
 ## ui notes
 - I still need to figure out which window placement is best. 

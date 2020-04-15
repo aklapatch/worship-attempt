@@ -4,4 +4,6 @@
 *.ini
 *.ttf
 *.ini
+*~
+*.db
 imgui/

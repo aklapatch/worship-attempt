@@ -25,41 +25,7 @@
 #include <stdio.h>
 #include <string>
 
-// About Desktop OpenGL function loaders:
-//  Modern desktop OpenGL doesn't have a standard portable header file to load
-//  OpenGL function pointers. Helper libraries are often used for this purpose!
-//  Here we are supporting a few common ones (gl3w, glew, glad). You may use
-//  another loader/header of your choice (glext, glLoadGen, etc.), or chose to
-//  manually implement your own.
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
-#include <GL/gl3w.h> // Initialize with gl3wInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-#include <GL/glew.h> // Initialize with glewInit()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-#include <glad/glad.h> // Initialize with gladLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
-#define GLFW_INCLUDE_NONE // GLFW including OpenGL headers causes ambiguity or
-                          // multiple definition errors.
-#include <glbinding/gl/gl.h>
-#include <glbinding/glbinding.h> // Initialize with glbinding::initialize()
-using namespace gl;
-#else
-#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
-#endif
-
-// Include glfw3.h after our OpenGL definitions
-#include <GLFW/glfw3.h>
-
-// [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to
-// maximize ease of testing and compatibility with old VS compilers. To link
-// with VS2010-era libraries, VS2015+ requires linking with
-// legacy_stdio_definitions.lib, which we do using this pragma. Your own project
-// should not be affected, as you are likely to link with a newer binary of GLFW
-// that is adequate for your version of Visual Studio.
-#if defined(_MSC_VER) && (_MSC_VER >= 1900) &&                                 \
-    !defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
-#pragma comment(lib, "legacy_stdio_definitions")
-#endif
+#include"imGLsetup.h"
 
 static void drawTextOnImage(Cairo::RefPtr<Cairo::Context> cr, std::string text, double font_size) {
 
@@ -135,50 +101,54 @@ static void showMainMenuBar() {
   }
 }
 
-// this does not caputer antying before start_pos
-std::vector<song_part> sepTitleParts(std::string text, uint32_t start_pos){
+// grab the title, then associate all the unnamed buffers that come after it
+// (all the buffers taht do not have any [] in them.
+std::vector<song_part> sepTitleParts(std::vector<std::string> text){
   
   std::vector<song_part> output;
+  song_part tmp;
+  tmp.name = "";
   uintptr_t text_len = text.size();
   uintptr_t title_start, title_end, search_pos, end_pos;
-  title_start = title_end = search_pos = end_pos = 0;
-  while(end_pos < text_len){
-	title_start = text.find('[', search_pos);
-	// TODO: emit a parsing error if you find a ']'
-	if (title_start == std::string::npos){
-
-	  // get the rest of the text and return
-	  output.push_back({"", text.substr(search_pos, text_len - search_pos)});
-	  return output;
-					   
-	}
-	
-	title_end = text.find(']', title_start);
-	if (title_end == std::string::npos){
-	  std::cerr << "Error parsing song part\n";
-	  std::cerr << "Rest of part was:\n";
-	  std::cerr << text.substr(title_start, text_len - title_start);
-	  std::cerr << "\n";
-	  return output;	
-	}
-	// try to avoid overrunning the vector
-	if (title_end < text_len -1){
-	  ++title_end;
+  for (uintptr_t i = 0; i < text_len; ++i){
+	// if you find a [, then init a name. if a name is not provided, then just make it all one part 
+	title_start = text[i].find('[', 0); 
+	if(title_start != std::string::npos){
+	  // init name
+	  title_end = text[i].find(']', title_start);
+	  if (title_end == std::string::npos){
+		std::cerr << "\ntitle parsing error, didn't find a ]\n";
 	  }
-	std::string title = text.substr(title_start, title_end - title_start);
-	
-	// go until next '['
-	// FIXME: possible segfault
-	search_pos = title_end;
-	end_pos = text.find('[', search_pos);
-	if (end_pos == std::string::npos){
-	  end_pos = text_len;
+	  else {
+		// if there is a new title, then push the old paragraphcs
+		if (tmp.paras.size() > 0){
+			output.push_back(tmp);
+		}
+		// clear out/reset tmp
+		tmp.name.clear();
+		tmp.paras.clear();
+
+		tmp.name = text[i].substr(title_start, title_end+1 - title_start);
+
+		// push in everything after the title
+		title_end++;
+		if (text[i][title_end] == '\n'){
+		  title_end++;
+		}
+		tmp.paras.push_back(text[i].substr(title_end, text[i].size() - title_end));
+	  }
 	}
-	std::string text_part = text.substr(search_pos, end_pos - search_pos);
-	
-	output.push_back({title, text_part});
-	search_pos = end_pos;
+	else{
+	  tmp.paras.push_back(text[i]);
 	}
+
+  }
+  // if tmp was not named and has somthing in it, then the output should too. 
+  // right now that loop above only pushes back if a name is detected
+  if (tmp.paras.size() > 0){
+	output.push_back(tmp);
+  }
+
   return output;
 }
 
@@ -191,6 +161,28 @@ bool isSpace(std::string input){
   }
   return size == input.size();
 }
+
+std::vector<std::string> sepPara(std::string song_text){
+  // separate paragraphs (two \n 's together)
+  std::vector<std::string> output;
+  uintptr_t end = song_text.size();
+  uintptr_t start = 0;
+  uintptr_t end_para = 0;
+  while(start < end){
+	end_para = song_text.find("\n\n", start);
+	if (end_para == std::string::npos){
+	  end_para = end;
+	}
+	
+	output.push_back(song_text.substr(start, end_para - start));
+	start = end_para;
+	if (song_text[start] == '\n'){
+	  ++start;
+	}
+  }
+  return output;
+}
+
     // this algorithm should find brackets [ ] and
     // assign the text between the brackets to the name field
     // and assign what follows that (until you get to two \n in a row)
@@ -198,47 +190,12 @@ bool isSpace(std::string input){
 // for names 
 std::vector<song_part> sepSongParts(std::string song_text) {
 
-  std::vector<song_part> output = {};
-  
-  // first separate all the \n\n speparated paragraphs, and then
-  // pull the names out of all those buffers.
-
   // pull the \n\n separations out
-  std::vector<std::string> separate_bufs = {};
-  uintptr_t start_pos = 0;
-  uintptr_t end_pos = 0;
-  uintptr_t text_len = song_text.size(); 
-  // FIXME? : if end_pos is == songtext.size, then it might be a buffer
-  // overrun when makeing the substring for separate_bufs
-  while(end_pos < text_len) {
-	end_pos = song_text.find("\n\n", start_pos);
-	if (end_pos == std::string::npos){
-
-		// grab the whole thing in this case
-		end_pos = text_len; 
-	}
-	separate_bufs.push_back( song_text.substr( start_pos, end_pos - start_pos)); 
-	start_pos = end_pos+1;
-
-	}
+  std::vector<std::string> paras = sepPara(song_text);
   
   // second phase, turn the bufs into song_parts 
   // assign blank names to the ones without [names]
-  uint32_t num_parts = separate_bufs.size();
-  start_pos = 0;
-  end_pos = 0;
-  uint32_t title_start = 0;
-  uint32_t title_end = 0;
-  std::vector<song_part> tmp;
-  std::vector<song_part>::iterator it;
-  for(uint32_t i = 0; i< num_parts; ++i){
-	tmp = sepTitleParts(separate_bufs[i], 0);
-	it = output.end();
-	output.insert(it, tmp.begin(), tmp.end());
-	
-  }
-
-  return output;
+  return sepTitleParts(paras);
 }
 
 // buffers for song editor
@@ -399,7 +356,7 @@ static uint32_t scheduleBuilder(std::vector<song> all_songs , std::vector<song>&
 	return selected_num;
 }
 
-static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
+static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names ,std::string & song_word_buf){
 
   ImGui::Begin("Schedule");
   ImGui::BeginChild("ChildL", ImVec2(ImGui::GetWindowContentRegionWidth()*0.5f,400), true);
@@ -422,31 +379,45 @@ static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sche
   if (prev_song_num != selected_song_num && selected_song_num >= 0){
 	// print out the separated song parts
 	std::cerr << "Songs's contents = \n";
-	std::cerr << sched_songs[selected_song_num].body << "\n";
 	std::vector<song_part> parts = sepSongParts(sched_songs[selected_song_num].body);
 	for (auto x: parts){
 	  std::cerr << "title = " << x.name << "\n";
-	  std::cerr << "text = " << x.text << "\n";
+	  for (auto y: x.paras){
+		std::cerr << "para = " << y << "\n";
 	  }
-
 	}
+
+  }
   prev_song_num = selected_song_num;
   ImGui::EndChild();
-  
-  
 
   ImGui::Text("Rendered_song");
   // separate the song's parts and draw them as different boxes to click on
   // TODO: optimize this so that it does not recopy the song every time.
   if ( selected_song_num >= 0){
-  song curr_song = sched_songs[selected_song_num];
-  
+	song curr_song = sched_songs[selected_song_num];
+
+	std::vector<song_part> parts = sepSongParts(curr_song.body);
+	// print buttons for text 
   // TODO: get stuff and do stuff with it.
   // separate song parts into verses that are labeled with teh proper sytnax
   // lay them all out as buttons with the proper labes (from the titles taht they were given
   // I still need to associate the verses and stuff with progression.
-  }
+	uintptr_t end = parts.size();
+	
+	for (uintptr_t i = 0; i < end; ++i){
+	  if (parts[i].name.size() > 0){
+		ImGui::Text(parts[i].name.c_str());
+	  }
+	  for (auto x: parts[i].paras){
+	  if(ImGui::Button(x.c_str())){
+		// copy string contents to display on image
+		song_word_buf = x;
+		}
+	  }
+	}
 
+  }
 
   ImGui::End(); // Schedule
   
@@ -625,10 +596,9 @@ int main(int, char **) {
     ImGuiIO &io = ImGui::GetIO();
 
 	// I tried to make this return an int32_t and then the window failed to draw
-	 schedSongUnit(all_song_list,sched_song_list, song_names );
+	 schedSongUnit(all_song_list,sched_song_list, song_names, song_word_buf );
 
     ImGui::Begin("img_test");
-    ImGui::InputTextMultiline("word input", (char*)song_word_buf.data(), word_buf_size);
     static int font_size = 10;
     ImGui::InputInt("font size", &font_size);
     // write text on image and do all the things you need to do to show it.

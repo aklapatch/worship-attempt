@@ -5,7 +5,8 @@
 #pragma once
 
 struct song_part {
-  std::string name, text;
+  std::string name;
+  std::vector<std::string> paras;
 };
 
 // the database will not store the song parts, but the application
