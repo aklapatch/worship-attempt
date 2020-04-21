@@ -21,4 +21,6 @@ struct song {
   std::string progression;
 
   std::string copyright_info;
+  std::string font_name;
+  int font_size;
 };

@@ -21,6 +21,7 @@
  - RELATED ^^^ : I cannot select duplicates in the schedule songs dialog (not sure why);
  - when you save a song, the schedule song list does not update with the new song (this is expected, since we copy those songs
  	- however, the bug regarding selecting duplicates still exists
+- I almost have song editing working, but the probelm is that when I try to save a song in the schedule, then the schedule songe does not update, and the rendered song selection freaks out. 
 	
 ## TODO: usability
 - warnings ifa  song is not formatted correctly
@@ -45,6 +46,9 @@
     - copyright stuff
     - song assoc id 
     - background for song (name/id for image)
+    - font name
+    - font size 
+    - font shadowing settings
 
 - song part assoc table
    - song_id

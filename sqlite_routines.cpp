@@ -6,6 +6,9 @@
 #include<stdio.h>
 #include "structs.h"
 
+#include"sqlite_routines.h"
+
+
 static int callback(void *notUsed, int argc, char **argv, char **colname) {
   for (int i = 0; i < argc; ++i) {
     std::cerr << colname[i] << " = " << (argv[i] ? argv[i] : "NULL") << "\n";
@@ -18,12 +21,12 @@ static int callback(void *notUsed, int argc, char **argv, char **colname) {
 // making rowid's by ourselves. That should save me the work
 // of making row id's by myself 
 // opens out_db and leaves it open for the program
-int init_and_open_db(char *fname, sqlite3 **out_db) {
+db_error init_and_open_db(char *fname, sqlite3 **out_db) {
   int rc = sqlite3_open(fname, out_db);
   if (rc) {
     std::cerr << "Failed to open " << fname << "\n";
     sqlite3_close(*out_db);
-    return 1;
+    return OPEN_FAILURE;
   }
   char *errmsg = NULL;
 
@@ -34,7 +37,7 @@ int init_and_open_db(char *fname, sqlite3 **out_db) {
   if (rc != SQLITE_OK) {
     std::cerr << "SQL Error " << __LINE__ << " " << errmsg << "\n";
     sqlite3_free(errmsg);
-    return 2;
+    return SQL_ERROR;
   }
   const char *sched_sql_cmd = "create table if not exists schedules("
                               "name TEXT"
@@ -44,7 +47,7 @@ int init_and_open_db(char *fname, sqlite3 **out_db) {
   if (rc != SQLITE_OK) {
     std::cerr << "SQL Error " << __LINE__ << errmsg << "\n";
     sqlite3_free(errmsg);
-    return 2;
+    return SQL_ERROR;
   }
 
   const char *song_sql_command =
@@ -54,7 +57,7 @@ int init_and_open_db(char *fname, sqlite3 **out_db) {
   if (rc != SQLITE_OK) {
     std::cerr << "SQL Error " << __LINE__ << errmsg << "\n";
     sqlite3_free(errmsg);
-    return 2;
+    return SQL_ERROR;
   }
   const char *sched_song_link_sql_cmd =
       "create table if not exists sched_song_links("
@@ -65,12 +68,12 @@ int init_and_open_db(char *fname, sqlite3 **out_db) {
   if (rc != SQLITE_OK) {
     std::cerr << "SQL Error " << errmsg << "\n";
     sqlite3_free(errmsg);
-    return 2;
+    return SQL_ERROR;
   }
-  return 0;
+  return SUCCESS;
 }
 // opens the db and saves the song to it.
-int saveSong(song input_song, char * db_name){
+db_error saveSong(song input_song, char * db_name){
   
   // open db
   sqlite3 *db;
@@ -79,7 +82,7 @@ int saveSong(song input_song, char * db_name){
   if (rc) {
     std::cerr << "Failed to open " << db_name << "\n";
     sqlite3_close(db);
-    return 1;
+    return SQL_ERROR;
   }
   //convert values to one sql query 
   std::stringstream ss;
@@ -118,10 +121,10 @@ int saveSong(song input_song, char * db_name){
 	std::cerr << "SQL Error in " <<__FILE__ << ":" << __LINE__ << "\n" <<  errmsg << "\n";
 	sqlite3_free(errmsg);
   sqlite3_close(db);
-	return 2;
+	return SQL_ERROR;
 	}
   sqlite3_close(db);
-  return 0;
+  return SUCCESS;
 }
   
 // store all the data into all_songs
@@ -153,14 +156,14 @@ static int storeCallback(void * data, int argc, char **argv, char **colname){
 }
 
 // this assumes the db is open
-int readSongs(sqlite3 * db, std::vector<song>& all_songs, std::vector<char*>& song_names){
+db_error readSongs(sqlite3 * db, std::vector<song>& all_songs, std::vector<char*>& song_names){
 
   const char * query = "select rowid,* from songs;";
 	char * err;
   if (sqlite3_exec(db, query, storeCallback, (void*)&all_songs, &err) != SQLITE_OK){
 	std::cerr << "SQL Error at " << __LINE__ <<  ": " << err <<  "\n";
 	sqlite3_free(err);
-	return 1;
+	return SQL_ERROR;
 
   }
 
@@ -175,5 +178,5 @@ int readSongs(sqlite3 * db, std::vector<song>& all_songs, std::vector<char*>& so
 	song_names[i] = (char*)all_songs[i].name.data();
   }
 
-  return 0;
+  return SUCCESS;
 }
