@@ -418,7 +418,7 @@ static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sche
   ImGui::Text("Rendered_song");
   // separate the song's parts and draw them as different boxes to click on
   // TODO: optimize this so that it does not recopy the song every time.
-  if ( selected_song_num >= 0){
+  if ( selected_song_num >= 0 && sched_songs.size() > 0){
     song curr_song = sched_songs[selected_song_num];
 
     std::vector<song_part> parts = sepSongParts(curr_song.body);

@@ -92,6 +92,7 @@ db_error saveSong(song input_song, char * db_name){
   // you have to use the c_str() function otherwise sqlite will complain that
   // there is an invalid token that you cannot see.
   // the caller of this function makes sure that there is a name
+  //
   ss << input_song.name.c_str()<< "','"; 
 
   std::cerr << "size = " << input_song.body.size() << "\n"; 
