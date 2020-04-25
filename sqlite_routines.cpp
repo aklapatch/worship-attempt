@@ -1,20 +1,31 @@
-#include <iostream>
-#include<sstream>
-#include <sqlite3.h>
-#include <stdlib.h>
-#include<string.h>
-#include<stdio.h>
-#include "structs.h"
 
 #include"sqlite_routines.h"
 
-
 static int callback(void *notUsed, int argc, char **argv, char **colname) {
-  for (int i = 0; i < argc; ++i) {
-    std::cerr << colname[i] << " = " << (argv[i] ? argv[i] : "NULL") << "\n";
-  }
-  std::cerr << "\n";
   return 0;
+}
+
+db_error deleteSong(char*fname, std::string song_name){
+
+  sqlite3 * out_db;
+  int rc = sqlite3_open(fname, &out_db);
+  if (rc) {
+    std::cerr << "Failed to open " << fname << "\n";
+    sqlite3_close(out_db);
+    return OPEN_FAILURE;
+  }
+  std::stringstream ss;
+  ss << "delete from songs where title = '" << song_name.c_str() << "';";
+  char * errmsg = NULL;
+  rc = sqlite3_exec(out_db, ss.str().c_str(), callback, 0, &errmsg);
+  if (rc != SQLITE_OK) {
+    std::cerr << "SQL Error " << __LINE__ << errmsg << "\n";
+    std::cerr << "statement = " << ss.str() << "\n";
+    sqlite3_free(errmsg);
+    return SQL_ERROR;
+  }
+
+  return SUCCESS;
 }
 
 // we will use the build in rowid that sqlite has instead of 
@@ -129,7 +140,7 @@ db_error saveSong(song input_song, char * db_name){
 }
   
 // store all the data into all_songs
-static int storeCallback(void * data, int argc, char **argv, char **colname){
+int storeCallback(void * data, int argc, char **argv, char **colname){
   std::vector<song> *data_vec = (std::vector<song>*)data;
   
   // there should be 6 items:
@@ -159,6 +170,8 @@ static int storeCallback(void * data, int argc, char **argv, char **colname){
 // this assumes the db is open
 db_error readSongs(sqlite3 * db, std::vector<song>& all_songs, std::vector<char*>& song_names){
 
+  all_songs.resize(0);
+  song_names.resize(0);
   const char * query = "select rowid,* from songs;";
 	char * err;
   if (sqlite3_exec(db, query, storeCallback, (void*)&all_songs, &err) != SQLITE_OK){

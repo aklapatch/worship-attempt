@@ -289,7 +289,23 @@ static auto vector_getter(void* vec, int idx, const char ** out_text)
   return true;
 }
 
-static uint32_t scheduleBuilder(std::vector<song> all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
+db_error reloadSongs(std::vector<song> & all_songs, std::vector<char*>&song_names){
+
+
+  all_songs.clear();
+  all_songs.shrink_to_fit();
+  song_names.clear();
+  song_names.shrink_to_fit();
+  std::cerr << "reloading songs" << "\n";
+  sqlite3 *tmp_db;
+  sqlite3_open(db_name, &tmp_db);
+  readSongs(tmp_db, all_songs, song_names);
+  sqlite3_close(tmp_db);
+
+  return SUCCESS;
+}
+
+static uint32_t scheduleBuilder(std::vector<song> &all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names){
 
   
   ImGuiIO &io = ImGui::GetIO();
@@ -314,7 +330,22 @@ static uint32_t scheduleBuilder(std::vector<song> all_songs , std::vector<song>&
                 "Double click a song in the list to add it, \nand hover over a song "
                 "and hit the delete key to remove a song from the schedule.");
 
+    static int32_t selected = -1;
     ImGui::Separator();
+    if(ImGui::Button("Delete selected song from database.")){
+
+      if (selected > -1){
+        db_error err = deleteSong(db_name, all_songs[selected].name);
+        if (err == SUCCESS){
+          all_songs.erase(all_songs.begin() + (size_t)selected);
+        }
+        else{
+          std::cerr << "Deleting song from database failed!\n";
+        }
+        reloadSongs(all_songs, song_names);
+
+      }
+    }
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
     
     ImGui::BeginChild("songch",ImVec2(ImGui::GetWindowContentRegionWidth()*0.5f, 0), true, window_flags );
@@ -322,12 +353,14 @@ static uint32_t scheduleBuilder(std::vector<song> all_songs , std::vector<song>&
 
     ImGui::Separator();
     int size = all_songs.size();
-    static uint32_t selected = 0;
-    for(int i = 0; i < size; ++i){
+    if (size == 0){
+      ImGui::Text("No songs were found in the database.");
+    }
+    for(int i = 0; i < all_songs.size(); ++i){
       // only draw members that match the title.
       if(all_songs[i].name.find(title_buf.c_str()) <= 1){
 
-        if(ImGui::Selectable(all_songs[i].name.c_str())){
+        if(ImGui::Selectable(all_songs[i].name.c_str(), i == selected)){
           // load buffers for editor
           titlebuf = all_songs[i].name;
           titlebuf.reserve(titlebuflen);
@@ -337,13 +370,14 @@ static uint32_t scheduleBuilder(std::vector<song> all_songs , std::vector<song>&
           lyricbuf.reserve(lyricbuflen);
           orderbuf = all_songs[i].progression;
           orderbuf.reserve(orderbuflen);
+          selected = i;
 
         }
         if (ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemActive()
             && ImGui::IsItemHovered()){
             sched_songs.push_back(all_songs[i]);
         }
-    }
+      }
     }
     ImGui::EndChild();
 
@@ -380,6 +414,7 @@ static uint32_t scheduleBuilder(std::vector<song> all_songs , std::vector<song>&
     return selected_num;
 }
 
+
 static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names ,std::string & song_word_buf){
 
   ImGui::Begin("Schedule");
@@ -388,12 +423,7 @@ static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sche
   ImGui::EndChild();
   
   if(reload_songs){
-    all_songs.clear();
-    std::cerr << "reloading songs" << "\n";
-    sqlite3 *tmp_db;
-    sqlite3_open(db_name, &tmp_db);
-    readSongs(tmp_db, all_songs, song_names);
-    sqlite3_close(tmp_db);
+    reloadSongs(all_songs, song_names);
   }
 
   ImGui::SameLine();

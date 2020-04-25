@@ -1,5 +1,12 @@
 
 #include <iostream>
+#include<sstream>
+#include <sqlite3.h>
+#include <stdlib.h>
+#include<string.h>
+#include<stdio.h>
+#include "structs.h"
+#include <iostream>
 #include <sqlite3.h>
 #include <stdlib.h>
 
@@ -18,3 +25,5 @@ db_error init_and_open_db(char *, sqlite3 **);
 db_error saveSong(song input_song, char * db_name);
 
 db_error readSongs(sqlite3*, std::vector<song>&, std::vector<char*> &);
+
+db_error deleteSong(char*fname, std::string song_name);
