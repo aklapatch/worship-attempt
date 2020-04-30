@@ -11,17 +11,13 @@
 #include "imgui/examples/imgui_impl_glfw.h"
 #include "imgui/examples/imgui_impl_opengl3.h"
 #include "sqlite_routines.h"
+#include"imageMenu.h."
+#include"fileMenu.h"
 
 #include <algorithm>
-#include <cstdint>
 #include <cstring>
 #include <iostream>
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/hal/interface.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc.hpp>
 #include <stdio.h>
-#include <string>
 
 // leave this here after all the other headers
 #include"imGLsetup.h"
@@ -199,21 +195,19 @@ std::vector<song_part> sepSongParts(std::string song_text) {
 
 // buffers for song editor
 const int copyrightbuflen = 100;
-static std::string copyrightbuf(copyrightbuflen, '\0' );
+std::string copyrightbuf(copyrightbuflen, '\0' );
 
 const int lyricbuflen = 1024;
-static std::string lyricbuf(lyricbuflen, '\0' );
+std::string lyricbuf(lyricbuflen, '\0' );
 
 const int titlebuflen = 64;
-static std::string titlebuf(titlebuflen, '\0');
+std::string titlebuf(titlebuflen, '\0');
 
 const int orderbuflen = 64;
-static std::string orderbuf(orderbuflen, '\0');
+std::string orderbuf(orderbuflen, '\0');
 
 char db_name[] = "outtest.db";
 
-static void errPopup(const char* msg){
-}
 static bool songEditor() {
   // song editor windows
   ImGui::InputText("Song title", (char*)titlebuf.c_str(), titlebuflen);
@@ -276,10 +270,10 @@ ImGui::SameLine();
 }
 
 const uint32_t title_buf_len = 200;
-static std::string title_buf(title_buf_len+1, '\0');
+std::string title_buf(title_buf_len+1, '\0');
 
 const uint32_t lyric_buf_len = 200;
-static std::string lyric_buf(lyric_buf_len+1, '\0');
+std::string lyric_buf(lyric_buf_len+1, '\0');
 
 static auto vector_getter(void* vec, int idx, const char ** out_text)
 {
@@ -627,6 +621,8 @@ int main(int, char **) {
 
   static std::string tmp_word_buf(word_buf_size+1, '\0');
 
+  std::vector<image> img_list;
+
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     // Poll and handle events (inputs, window resize, etc.)
@@ -694,39 +690,22 @@ int main(int, char **) {
                  ImVec2(tmp_image.cols, tmp_image.rows));
     ImGui::End();
 
-    // 1. Show the big demo window (Most of the sample code is in
-    // ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear
-    // ImGui!).
+    imageMenu(img_list);
+
     if (show_demo_window)
       ImGui::ShowDemoWindow(&show_demo_window);
 
-    // 2. Show a simple window that we create ourselves. We use a Begin/End pair
-    // to created a named window.
     {
-      static float f = 0.0f;
-      static int counter = 0;
 
       ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!"
                                      // and append into it.
 
-      ImGui::Text("This is some useful text."); // Display some text (you can
                                                 // use a format strings too)
       ImGui::Checkbox(
           "Demo Window",
           &show_demo_window); // Edit bools storing our window open/close state
-      ImGui::Checkbox("Another Window", &show_another_window);
 
-      ImGui::SliderFloat("float", &f, 0.0f,
-                         1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
-      ImGui::ColorEdit3(
-          "clear color",
-          (float *)&clear_color); // Edit 3 floats representing a color
 
-      if (ImGui::Button("Button")) // Buttons return true when clicked (most
-                                   // widgets return true when edited/activated)
-        counter++;
-      ImGui::SameLine();
-      ImGui::Text("counter = %d", counter);
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);

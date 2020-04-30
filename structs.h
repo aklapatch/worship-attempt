@@ -2,12 +2,23 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/hal/interface.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+
 #pragma once
 
 struct song_part {
   std::string name;
   std::vector<std::string> paras;
 };
+
+struct image {
+  std::string name;
+  cv::Mat datamat;
+};
+
 
 // the database will not store the song parts, but the application
 // will need them for displaying different parts of songs

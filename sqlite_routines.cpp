@@ -50,6 +50,7 @@ db_error init_and_open_db(char *fname, sqlite3 **out_db) {
     sqlite3_free(errmsg);
     return SQL_ERROR;
   }
+  // TODO: this table format needs to change
   const char *sched_sql_cmd = "create table if not exists schedules("
                               "name TEXT"
                               ");";

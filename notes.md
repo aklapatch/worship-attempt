@@ -20,9 +20,8 @@
 - songs in the schedule section, if there are duplicates, selecting the duplicate fails to have the song titles show up in the selection dialog boxes
  - RELATED ^^^ : I cannot select duplicates in the schedule songs dialog (not sure why);
  - when you save a song, the schedule song list does not update with the new song (this is expected, since we copy those songs
- 	- however, the bug regarding selecting duplicates still exists
-- I almost have song editing working, but the probelm is that when I try to save a song in the schedule, then the schedule songe does not update, and the rendered song selection freaks out. 
-	
+      - however, the bug regarding selecting duplicates still exists
+
 ## TODO: usability
 - warnings ifa  song is not formatted correctly
 - warnings if a song is being overwritten (name collision)
@@ -30,17 +29,15 @@
 ## ui notes
 - I still need to figure out which window placement is best. 
 - I need:
-  - list of all songs
-  - lsit of current shedule songs
-  - search dialog (connected to list of all songs)
+  - search dialog (connected to list of all songs) (partially done)
   - preview window for the song (with a way to select the versese and display their text
-  - song text editor, place to update the song and re-save it.
-  - that hot editing should affect only the schedule copy of the song, but the 'save' button will make it save to the databse.
+  - song text editor, place to update the song and re-save it. (schedule does not update yet)
+  - hot editing should affect only the schedule copy of the song, but the 'save' button will make it save to the databse.
   - saving the schedule will save the changes that you made to the schedule-songs, but to a separate file.
 
 ## database design (SQLITE)
+SQLITE has built in rowid's so I don't need to include id's
 - songs table
-    - id 
     - title
     - author
     - copyright stuff
@@ -50,29 +47,15 @@
     - font size 
     - font shadowing settings
 
-- song part assoc table
-   - song_id
-   - part_id
-
-- song part table
-    - id 
-    - part_type(tag, verse, chorus,)
-    - contents
-
 - images
-    - name
-    - id
+    - name (include png,jpg suffix)
     - data (png, jpg data)
 
 - schedule (for songs)
-  	- font_size?
-	- font_style? (bold, semi-bold, shadow, etc) (enums probably)
-    - id
+    - font_size?
+    - font_style? (bold, semi-bold, shadow, etc) (enums probably)
 
 - sched-song-link
-    - sched id 
+    - song names (rowid + name)
     - song id's
-
-
-
 
