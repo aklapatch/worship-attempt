@@ -28,7 +28,9 @@ bool fileMenu(std::string &file_name){
 
         struct dirent *files_dir = readdir(dir);
         while(files_dir != NULL){
-            file_list.push_back(files_dir->d_name);
+            if (strcmp(files_dir->d_name, ".") != 0){
+                file_list.push_back(files_dir->d_name);
+            }
             files_dir = readdir(dir);
 
         }
@@ -41,6 +43,7 @@ bool fileMenu(std::string &file_name){
     // only show images (png, jpg, jpeg, TIFF, BMP)
     // if the OK button is pressed, 
     ImGui::Begin("file menu");
+    ImGui::Text(curr_dir.c_str());
     static int32_t selected = 0;
 
     //list all the files in the current dir
@@ -90,7 +93,9 @@ bool fileMenu(std::string &file_name){
                 struct dirent *files_dir = readdir(dir);
                 file_list.clear();
                 while(files_dir != NULL){
-                    file_list.push_back(files_dir->d_name);
+                    if (strcmp(files_dir->d_name, ".") != 0){
+                        file_list.push_back(files_dir->d_name);
+                    }
                     files_dir = readdir(dir);
                 }
                 closedir(dir);
@@ -99,6 +104,10 @@ bool fileMenu(std::string &file_name){
         ImGui::EndChild();
     }
 
+    if (selected > 0){
+    std::string curr_file = curr_dir + file_list[selected];
+    ImGui::Text(curr_file.c_str());
+            }
     bool exit_ok = false, exit_cancel = false;
     // go into that folder if you double click the folder
     if (ImGui::Button("OK")) exit_ok = true;

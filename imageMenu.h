@@ -20,5 +20,6 @@
 #include <opencv2/imgproc.hpp>
 #include <stdio.h>
 #include <string>
+#include <opencv2/imgcodecs.hpp>
 
 bool imageMenu(std::vector<image>&);

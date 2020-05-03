@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sqlite3.h>
 #include <stdlib.h>
+#include<vector>
 
 #pragma once
 
@@ -27,3 +28,6 @@ db_error saveSong(song input_song, char * db_name);
 db_error readSongs(sqlite3*, std::vector<song>&, std::vector<char*> &);
 
 db_error deleteSong(char*fname, std::string song_name);
+
+// this will open the database
+db_error saveImg(std::vector<unsigned char>, std::string);

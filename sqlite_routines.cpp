@@ -1,6 +1,7 @@
 
 #include"sqlite_routines.h"
 
+static const char * db_name = "outtest.db";
 static int callback(void *notUsed, int argc, char **argv, char **colname) {
   return 0;
 }
@@ -193,5 +194,45 @@ db_error readSongs(sqlite3 * db, std::vector<song>& all_songs, std::vector<char*
 	song_names[i] = (char*)all_songs[i].name.data();
   }
 
+  return SUCCESS;
+}
+
+  //const char *picture_sql_cmd = "create table if not exists pictures("
+//" name text,data blob);";
+db_error saveImg(std::vector<unsigned char> img_data, std::string img_name){
+  char * errmsg;
+
+  // open db
+  sqlite3 *db;
+
+  int rc = sqlite3_open("outtest.db", &db);
+	
+  if (rc) {
+    std::cerr << "Failed to open " << db_name << "\n";
+    sqlite3_close(db);
+    return OPEN_FAILURE;
+  }
+  std::stringstream ss;
+  ss << "insert into pictures values('" << img_name.c_str() << "',";
+
+  std::cerr << img_data.size()<< "\n";
+  for (auto x:img_data){
+    unsigned int tmp = x;
+    ss << tmp;
+  }
+
+  ss << ");";
+
+  std::string query = ss.str();
+  std::cerr << query<< "\n";
+
+  rc = sqlite3_exec(db, query.c_str(), callback, 0 ,&errmsg);
+  if (rc != SQLITE_OK){
+	std::cerr << "SQL Error in " <<__FILE__ << ":" << __LINE__ << "\n" <<  errmsg << "\n";
+	sqlite3_free(errmsg);
+  sqlite3_close(db);
+	return SQL_ERROR;
+	}
+  sqlite3_close(db);
   return SUCCESS;
 }

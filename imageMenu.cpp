@@ -40,10 +40,26 @@ ImGui::Begin("image menu");
         // open the file menu here
         if (open_file_menu){
             open_file_menu = !(fileMenu(new_img));
+            // if the string size is > 0, then there is a file to load.
             if (new_img.size() > 0){
                 // load the image
-                //saveImg(new_img);
+                // open the filel with opencv
+                std::cerr << new_img << "\n";
+          cv::Mat orig_image = cv::imread(new_img.c_str(), cv::IMREAD_COLOR);
+          auto img_arr = cv::InputArray(orig_image);
+          // use jpg compression (it's fast)
+          std::vector<unsigned char> img_out = {};
+          // lossless jpg compression
+            bool rc = cv::imencode(".jpg", img_arr, img_out, {cv::IMWRITE_JPEG_QUALITY, 100});
 
+            // pass the image buffer and the filename to be saved in the database.
+            // adding the +1 excludes the '/'
+            size_t last_slash_i =  new_img.rfind("/") + 1; 
+            std::string img_name = new_img.substr(last_slash_i, new_img.size() - last_slash_i);
+                std::cerr << img_name<< "\n";
+                saveImg(img_out, img_name);
+
+            open_file_menu = false;
             }
         }
 
