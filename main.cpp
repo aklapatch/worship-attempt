@@ -206,6 +206,8 @@ std::string titlebuf(titlebuflen, '\0');
 const int orderbuflen = 64;
 std::string orderbuf(orderbuflen, '\0');
 
+std::string img_list;
+
 char db_name[] = "outtest.db";
 
 static bool songEditor() {
@@ -690,7 +692,13 @@ int main(int, char **) {
                  ImVec2(tmp_image.cols, tmp_image.rows));
     ImGui::End();
 
-    imageMenu(img_list);
+    static bool reload_imgs = true;
+
+    if(reload_imgs){
+
+      db_error err = readImgs(img_list);
+    }
+    reload_imgs = imageMenu(img_list);
 
     if (show_demo_window)
       ImGui::ShowDemoWindow(&show_demo_window);

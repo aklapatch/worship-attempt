@@ -33,8 +33,6 @@ ImGui::Begin("image menu");
 
         ImGui::EndChild();
 
-
-
         ImGui::End();
 
         // open the file menu here
@@ -56,15 +54,19 @@ ImGui::Begin("image menu");
             // adding the +1 excludes the '/'
             size_t last_slash_i =  new_img.rfind("/") + 1; 
             std::string img_name = new_img.substr(last_slash_i, new_img.size() - last_slash_i);
-                std::cerr << img_name<< "\n";
-                saveImg(img_out, img_name);
+            std::cerr << img_name<< "\n";
+            saveImg(img_out, img_name);
 
             open_file_menu = false;
+
+            new_img.clear();
+
+            // return true if you need to reload the song list from the database
+            return true;
             }
         }
 
 
     return false;
-
 }
 

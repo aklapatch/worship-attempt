@@ -31,3 +31,5 @@ db_error deleteSong(char*fname, std::string song_name);
 
 // this will open the database
 db_error saveImg(std::vector<unsigned char>, std::string);
+
+db_error readImgs(std::vector<image>& out_list);

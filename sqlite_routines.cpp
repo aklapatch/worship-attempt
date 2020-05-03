@@ -6,6 +6,8 @@ static int callback(void *notUsed, int argc, char **argv, char **colname) {
   return 0;
 }
 
+
+
 db_error deleteSong(char*fname, std::string song_name){
 
   sqlite3 * out_db;
@@ -205,7 +207,7 @@ db_error saveImg(std::vector<unsigned char> img_data, std::string img_name){
   // open db
   sqlite3 *db;
 
-  int rc = sqlite3_open("outtest.db", &db);
+  int rc = sqlite3_open(db_name, &db);
 	
   if (rc) {
     std::cerr << "Failed to open " << db_name << "\n";
@@ -213,26 +215,71 @@ db_error saveImg(std::vector<unsigned char> img_data, std::string img_name){
     return OPEN_FAILURE;
   }
   std::stringstream ss;
-  ss << "insert into pictures values('" << img_name.c_str() << "',";
-
-  std::cerr << img_data.size()<< "\n";
-  for (auto x:img_data){
-    unsigned int tmp = x;
-    ss << tmp;
-  }
-
-  ss << ");";
-
+  ss << "insert into pictures(name, data) values('" << img_name.c_str() << "',?);";
   std::string query = ss.str();
-  std::cerr << query<< "\n";
 
-  rc = sqlite3_exec(db, query.c_str(), callback, 0 ,&errmsg);
+  sqlite3_stmt *stmt;
+  const char * not_used = NULL;
+  rc = sqlite3_prepare(db, query.c_str(), query.size(), &stmt, &not_used);
+
   if (rc != SQLITE_OK){
-	std::cerr << "SQL Error in " <<__FILE__ << ":" << __LINE__ << "\n" <<  errmsg << "\n";
-	sqlite3_free(errmsg);
-  sqlite3_close(db);
+      std::cerr << "SQLite Error: " << sqlite3_errmsg(db) << " " << __FILE__ << " @ " << __LINE__ << "\n";
+	sqlite3_close(db);
 	return SQL_ERROR;
 	}
+  rc = sqlite3_bind_blob(stmt, 1, img_data.data(), img_data.size(), SQLITE_STATIC);
+  rc = sqlite3_step(stmt);
+
+  if (rc != SQLITE_DONE){
+      std::cerr << "Sqlite error " << sqlite3_errmsg(db) << " " << __FILE__ << " @ " << __LINE__ << "\n";
+  sqlite3_close(db);
+	return SQL_ERROR;
+      }
+
+sqlite3_finalize(stmt);
+
   sqlite3_close(db);
   return SUCCESS;
+}
+
+
+int imgCallback(void * data, int argc, char **argv, char **colname){
+  std::vector<image> *out_data = (std::vector<image> *)data;
+
+  image tmp;
+  tmp.name = argv[0];
+  std::cerr << "\n" << argv[1] <<  "\n";
+
+  out_data->push_back(tmp);
+
+  return 0;
+}
+
+db_error readImgs(std::vector<image>& out_list){
+
+  // open db
+  sqlite3 *db;
+
+  out_list.clear();
+  int rc = sqlite3_open(db_name, &db);
+	
+  if (rc) {
+    std::cerr << "Failed to open " << db_name << "\n";
+    sqlite3_close(db);
+    return OPEN_FAILURE;
+  }
+  std::string query = "select name, data from pictures;";
+
+
+	char * err;
+  if (sqlite3_exec(db, query.c_str(), imgCallback, (void*)&out_list, &err) != SQLITE_OK){
+	std::cerr << "SQL Error at " << __LINE__ <<  ": " << err <<  "\n";
+	sqlite3_free(err);
+	return SQL_ERROR;
+
+  }
+
+  return SUCCESS;
+
+
 }
