@@ -45,7 +45,7 @@ db_error init_and_open_db(char *fname, sqlite3 **out_db) {
   char *errmsg = NULL;
 
   const char *picture_sql_cmd = "create table if not exists pictures("
-" name text,data blob);";
+" name text, size int,data blob);";
 
   rc = sqlite3_exec(*out_db, picture_sql_cmd, callback, 0, &errmsg);
   if (rc != SQLITE_OK) {
@@ -215,7 +215,7 @@ db_error saveImg(std::vector<unsigned char> img_data, std::string img_name){
     return OPEN_FAILURE;
   }
   std::stringstream ss;
-  ss << "insert into pictures(name, data) values('" << img_name.c_str() << "',?);";
+  ss << "insert into pictures(name, size, data) values('" << img_name.c_str() << "'," << img_data.size() << ",?);";
   std::string query = ss.str();
 
   sqlite3_stmt *stmt;
@@ -248,7 +248,22 @@ int imgCallback(void * data, int argc, char **argv, char **colname){
 
   image tmp;
   tmp.name = argv[0];
-  std::cerr << "\n" << argv[1] <<  "\n";
+  uint32_t size = atoi(argv[1]);
+  std::vector<unsigned char> img_data = {};
+  img_data.resize(size);
+  uint32_t i = 0;
+
+  while (i <  size){
+
+    img_data[i] = argv[2][i];
+
+    ++i;
+
+  }
+
+  auto img_arr = cv::InputArray(img_data);
+  tmp.datamat = cv::imdecode(img_arr, cv::IMREAD_COLOR);
+  std::cerr << "\n";
 
   out_data->push_back(tmp);
 
@@ -268,7 +283,7 @@ db_error readImgs(std::vector<image>& out_list){
     sqlite3_close(db);
     return OPEN_FAILURE;
   }
-  std::string query = "select name, data from pictures;";
+  std::string query = "select name, size, data from pictures;";
 
 
 	char * err;
