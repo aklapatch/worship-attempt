@@ -263,6 +263,7 @@ int imgCallback(void * data, int argc, char **argv, char **colname){
 
   auto img_arr = cv::InputArray(img_data);
   tmp.datamat = cv::imdecode(img_arr, cv::IMREAD_COLOR);
+  tmp.rowid = atoi(argv[3]);
   std::cerr << "\n";
 
   out_data->push_back(tmp);
@@ -283,7 +284,7 @@ db_error readImgs(std::vector<image>& out_list){
     sqlite3_close(db);
     return OPEN_FAILURE;
   }
-  std::string query = "select name, size, data from pictures;";
+  std::string query = "select name, size, data, rowid from pictures;";
 
 
 	char * err;

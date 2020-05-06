@@ -10,6 +10,8 @@
 #include "sqlite_routines.h"
 #include"fileMenu.h"
 
+#include<GL/gl3w.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <cstring>

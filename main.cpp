@@ -1,9 +1,4 @@
 
-// dear imgui: standalone example application for GLFW + OpenGL 3, using
-// programmable pipeline If you are new to dear imgui, see examples/README.txt
-// and documentation at the top of imgui.cpp. (GLFW is a cross-platform general
-// purpose library for handling windows, inputs, OpenGL/Vulkan graphics context
-// creation, etc.)
 #include <cairomm/cairomm.h>
 
 #include "structs.h"
@@ -548,7 +543,6 @@ int main(int, char **) {
   // convert BGRA -> ARGB
   int from_to[] = {0, 3, 1, 2, 2, 1, 3, 0};
   cv::mixChannels(&orig_image, 1, &cairo_img, 1, from_to, 4);
-  // cv::cvtColor(image, image, cv::COLOR_BGRA2RGBA)
   int stride = Cairo::ImageSurface::format_stride_for_width(
       Cairo::FORMAT_ARGB32, orig_image.cols);
   Cairo::RefPtr<Cairo::ImageSurface> surf =

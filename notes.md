@@ -1,12 +1,17 @@
 # ideas/notes
-- cairo for drawing stuff (text on images, etc)  (GNU LIbrary GPL)
 - libcurl for web requests  (MIT license)
-- sqlite for database needs (public domain?)
-- opencv to load images (overkill I know, but it works + is fast) (BSD 3 clause license) 
-- dear imgui for ui (fast, but not 'normal' looking) (MIT License)
 - maybe I need to not load all the songs at once. I may need to load all the songs 
   more lazily through the database, but I can't think of a way to do that without
   repeatedly reading to the database every draw call(THAT'S REALLY BAD). 
+
+## TODO: What to work on next
+- work on taking over a screen with glfw and displaying an image with text on the full screen.
+  - bind ESC so that it stops taking over the screen when released
+  - resize the background image to match dest screen (and then draw text on it
+- Implement text shadowing, italics, and find a way to load in all the fonts that windows has installed
+  -text color, justification, and other stuff
+- schedule saving/import
+- background image selection
 
 ## TODO: optimizations (speed!!!!!)
 - when redrawing the image, only redraw if they text has changed.
@@ -34,6 +39,7 @@
   - song text editor, place to update the song and re-save it. (schedule does not update yet)
   - hot editing should affect only the schedule copy of the song, but the 'save' button will make it save to the databse.
   - saving the schedule will save the changes that you made to the schedule-songs, but to a separate file.
+
 
 ## database design (SQLITE)
 SQLITE has built in rowid's so I don't need to include id's

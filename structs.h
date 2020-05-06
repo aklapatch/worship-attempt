@@ -15,6 +15,7 @@ struct song_part {
 };
 
 struct image {
+  uint32_t rowid; // rowid from sqlite
   std::string name;
   cv::Mat datamat;
 };
