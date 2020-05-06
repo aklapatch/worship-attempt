@@ -12,6 +12,11 @@
   -text color, justification, and other stuff
 - schedule saving/import
 - background image selection
+- overwrite images with duplicate names (or data)
+- overwrite songs with duplicate names (warn FIRST!!!)
+- Implement song ordering (use a hash map or something)
+- image_menu button wrapping
+- THERE SEEMS TO BE A MEMORY LEAK SOMEWHERE. I PROBABLY AM BINDING TEXTURES THAT I AM NOT FREEING.
 
 ## TODO: optimizations (speed!!!!!)
 - when redrawing the image, only redraw if they text has changed.
