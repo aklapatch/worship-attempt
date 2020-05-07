@@ -17,6 +17,7 @@
 // leave this here after all the other headers
 #include"imGLsetup.h"
 
+
 static void drawTextOnImage(Cairo::RefPtr<Cairo::Context> cr, std::string text, double font_size) {
 
   ///we will be altering data in tmp_text, so we will need a copy  of it
@@ -53,6 +54,16 @@ static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
+GLFWwindow *full_win = NULL;
+GLFWvidmode* mode = NULL; 
+
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+
 static void showMainMenuBar() {
 
   // main menu bar
@@ -80,14 +91,44 @@ static void showMainMenuBar() {
     }
     while (i < monitor_num) {
 
-    const char *monitor_name = glfwGetMonitorName(monitors[i]);
-    ImGui::Text("%s", monitor_name);
+      std::string monitor_name = glfwGetMonitorName(monitors[i]);
+      mode = ( GLFWvidmode *)glfwGetVideoMode(monitors[i]); 
+      monitor_name.append(": ");
+
+      monitor_name.append(std::to_string(mode->width));
+      monitor_name.append("x");
+      monitor_name.append(std::to_string(mode->height));
+
+      if (ImGui::Button(monitor_name.c_str())){
+        // destroy the old window if it exists
+        if (full_win != NULL){
+          glfwDestroyWindow(full_win);
+        }
+
+
+        glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+        glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+        glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+        glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+
+        full_win = glfwCreateWindow(mode->width, mode->height,"Full window", monitors[i], NULL);
+        glfwSwapInterval(1); // Enable vsync
+        // set the callback to exit when ESC is hit
+        glfwSetKeyCallback(full_win, key_callback);
+         
+      }
     ++i;
 
       }
       ImGui::EndMenu();
     }
     ImGui::EndMainMenuBar();
+  }
+
+  if(ImGui::IsKeyReleased(256) && full_win != NULL){
+    // close the full screen window is ESC is pressed
+    glfwDestroyWindow(full_win);
+    full_win = NULL;
   }
 }
 
@@ -484,15 +525,15 @@ int main(int, char **) {
 #else
   // GL 3.0 + GLSL 130
   const char *glsl_version = "#version 130";
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
   // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
   // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
 #endif
 
   // Create window with graphics context
   GLFWwindow *window = glfwCreateWindow(
-      1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
+      1280, 720, "Worship Attempt", NULL, NULL);
   if (window == NULL)
     return 1;
   glfwMakeContextCurrent(window);
@@ -609,6 +650,7 @@ int main(int, char **) {
 
   std::vector<image> img_list;
 
+
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     // Poll and handle events (inputs, window resize, etc.)
@@ -675,15 +717,9 @@ int main(int, char **) {
     ImGui::Image((void *)(intptr_t)img_tex,
                  ImVec2(tmp_image.cols, tmp_image.rows));
 
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glDeleteTextures(1, &img_tex);
 
     ImGui::End();
 
-    // unbind and delete the texture
-
-
-    
     static bool reload_imgs = true;
 
     if(reload_imgs){
@@ -701,7 +737,6 @@ int main(int, char **) {
       ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!"
                                      // and append into it.
 
-                                                // use a format strings too)
       ImGui::Checkbox(
           "Demo Window",
           &show_demo_window); // Edit bools storing our window open/close state
@@ -710,19 +745,6 @@ int main(int, char **) {
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-      ImGui::End();
-    }
-
-    // 3. Show another simple window.
-    if (show_another_window) {
-      ImGui::Begin(
-          "Another Window",
-          &show_another_window); // Pass a pointer to our bool variable (the
-                                 // window will have a closing button that will
-                                 // clear the bool when clicked)
-      ImGui::Text("Hello from another window!");
-      if (ImGui::Button("Close Me"))
-        show_another_window = false;
       ImGui::End();
     }
 
@@ -736,6 +758,34 @@ int main(int, char **) {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     glfwSwapBuffers(window);
+
+    // take care of the fullscreen window last
+    if (full_win != NULL && glfwWindowShouldClose(full_win)){
+        glfwDestroyWindow(full_win);
+        full_win = NULL;
+    }
+    if (full_win != NULL && !glfwWindowShouldClose(full_win)){
+      glfwMakeContextCurrent(full_win);
+
+      std::cerr << "OpenGL error = " << glGetError() <<" @ " << __LINE__ << "\n";
+
+      int h = mode->height;
+      int w = mode->width;
+      // just try making a vector with a gray color to see if this works
+       
+      std::vector<uint8_t> color_data(h*w*3, 128);
+      
+
+      glfwSwapBuffers(full_win);
+      std::cerr << "OpenGL error = " << glGetError() <<" @ " << __LINE__ << "\n";
+
+
+      double time = glfwGetTime();
+    }
+
+    glDeleteTextures(1, &img_tex);
+
+    glfwMakeContextCurrent(window);
   }
 
   // Cleanup

@@ -24,7 +24,7 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
 CXXFLAGS = -Iimgui/ -Iimgui/examples -Iimgui/examples/libs/gl3w -Invwa/nvwa/
-CXXFLAGS += -g -Wall -Wformat
+CXXFLAGS += -g -Wall -Wformat  
 LIBS = -lsqlite3
 
 ##---------------------------------------------------------------------
