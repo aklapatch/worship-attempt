@@ -261,8 +261,7 @@ int imgCallback(void * data, int argc, char **argv, char **colname){
 
   }
 
-  auto img_arr = cv::InputArray(img_data);
-  tmp.datamat = cv::imdecode(img_arr, cv::IMREAD_COLOR);
+  tmp.datamat = cv::imdecode(img_data, cv::IMREAD_COLOR);
   tmp.rowid = atoi(argv[3]);
   std::cerr << "\n";
 

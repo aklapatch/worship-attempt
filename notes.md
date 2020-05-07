@@ -4,6 +4,9 @@
   more lazily through the database, but I can't think of a way to do that without
   repeatedly reading to the database every draw call(THAT'S REALLY BAD). 
 
+## misc
+- there was a memory leak in the image menu, I needed to implement a system where new textures are only generated/allocated if the image_list size changes
+
 ## TODO: What to work on next
 - work on taking over a screen with glfw and displaying an image with text on the full screen.
   - bind ESC so that it stops taking over the screen when released
@@ -16,7 +19,6 @@
 - overwrite songs with duplicate names (warn FIRST!!!)
 - Implement song ordering (use a hash map or something)
 - image_menu button wrapping
-- THERE SEEMS TO BE A MEMORY LEAK SOMEWHERE. I PROBABLY AM BINDING TEXTURES THAT I AM NOT FREEING.
 
 ## TODO: optimizations (speed!!!!!)
 - when redrawing the image, only redraw if they text has changed.

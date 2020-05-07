@@ -562,17 +562,7 @@ int main(int, char **) {
   int final_from_to[] = {0, 3, 1, 0, 2, 1, 3, 2};
   cv::mixChannels(&tmp_image, 1, &disp_img, 1, final_from_to, 4);
 
-  // set up opengl to get image texture
   GLuint img_tex;
-  glGenTextures(1, &img_tex);
-  glBindTexture(GL_TEXTURE_2D, img_tex);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tmp_image.cols, tmp_image.rows, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, disp_img.data);
 
   // try executing sqlite commands
   sqlite3 *main_db;
@@ -613,9 +603,9 @@ int main(int, char **) {
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
   static uint32_t word_buf_size = 512;
-  static std::string song_word_buf(word_buf_size+1, '\0');
+  static std::string song_word_buf(word_buf_size, '\0');
 
-  static std::string tmp_word_buf(word_buf_size+1, '\0');
+  static std::string tmp_word_buf(word_buf_size, '\0');
 
   std::vector<image> img_list;
 
@@ -643,6 +633,7 @@ int main(int, char **) {
     // I tried to make this return an int32_t and then the window failed to draw
      schedSongUnit(all_song_list,sched_song_list, song_names, song_word_buf );
 
+     
     ImGui::Begin("img_test");
     static int font_size = 10;
     ImGui::InputInt("font size", &font_size);
@@ -671,7 +662,6 @@ int main(int, char **) {
     int final_from_to[] = {0, 3, 1, 0, 2, 1, 3, 2};
     cv::mixChannels(&tmp_image, 1, &disp_img, 1, final_from_to, 4);
 
-    //
     //  reload texture with image data
     //  TODO: only reload texture when setting or text changes.
     glBindTexture(GL_TEXTURE_2D, img_tex);
@@ -684,8 +674,16 @@ int main(int, char **) {
 
     ImGui::Image((void *)(intptr_t)img_tex,
                  ImVec2(tmp_image.cols, tmp_image.rows));
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDeleteTextures(1, &img_tex);
+
     ImGui::End();
 
+    // unbind and delete the texture
+
+
+    
     static bool reload_imgs = true;
 
     if(reload_imgs){
@@ -693,6 +691,7 @@ int main(int, char **) {
       db_error err = readImgs(img_list);
     }
     reload_imgs = imageMenu(img_list);
+    
 
     if (show_demo_window)
       ImGui::ShowDemoWindow(&show_demo_window);

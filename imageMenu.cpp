@@ -2,12 +2,13 @@
 
 // keep a list of images in the database (selectables that preview when clicked)
 //
+std::vector<GLuint> tex_ids(0);
+   
 bool imageMenu(std::vector<image> &image_list) {
     ImGui::Begin("image menu");
 
     static bool open_file_menu = false;
     static std::string new_img = "";
-
 
     ImGui::Text("image list");
     ImGui::SameLine();
@@ -23,7 +24,15 @@ bool imageMenu(std::vector<image> &image_list) {
     if (image_list.size() == 0){
         ImGui::Text("No images were found!");
     }
-    GLuint img_tex;
+
+
+    // if the image_list has changed size, then regen and rebind all the textures
+
+    if (image_list.size() != tex_ids.size()){
+        glDeleteTextures(tex_ids.size(), tex_ids.data());
+        tex_ids.resize(image_list.size());
+        glGenTextures(tex_ids.size(), tex_ids.data());
+    }
     for (auto x: image_list){
         i+=1;
 
@@ -45,9 +54,7 @@ bool imageMenu(std::vector<image> &image_list) {
         int from_to[] = { 2,0,1,1,0,2};
         cv::mixChannels(&scaled_img, 1, &disp_img, 1, from_to, 3);
         
-        glGenTextures(1, &img_tex);
-
-        glBindTexture(GL_TEXTURE_2D, img_tex);
+        glBindTexture(GL_TEXTURE_2D, tex_ids[i]);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -62,7 +69,7 @@ bool imageMenu(std::vector<image> &image_list) {
                 GL_UNSIGNED_BYTE, 
                 disp_img.data);
 
-        if(ImGui::ImageButton((void *)(intptr_t)img_tex,
+        if(ImGui::ImageButton((void *)(intptr_t)tex_ids[i],
                      ImVec2(disp_img.cols, disp_img.rows))){
             selected = i;
         }
@@ -102,6 +109,7 @@ bool imageMenu(std::vector<image> &image_list) {
             return true;
         }
     }
+    
 
 
     return false;
