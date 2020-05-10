@@ -3,6 +3,17 @@
 - maybe I need to not load all the songs at once. I may need to load all the songs 
   more lazily through the database, but I can't think of a way to do that without
   repeatedly reading to the database every draw call(THAT'S REALLY BAD). 
+  
+## Libs required to build
+### MSYS2
+All of these are the mingw-w64-x86_64 variants of these libraries.
+- opencv
+- sqlite 
+- cairomm
+- glfw
+- More that I may have forgetten
+### other
+- imgui
 
 ## misc
 - there was a memory leak in the image menu, I needed to implement a system where new textures are only generated/allocated if the image_list size changes
@@ -37,6 +48,11 @@
 ## TODO: usability
 - warnings ifa  song is not formatted correctly
 - warnings if a song is being overwritten (name collision)
+- building guide + makpkg script
+- static linking:
+    - build opencv statically (that's probably a nightmare)
+    - build everyting that is not static statically
+    
 
 ## ui notes
 - I still need to figure out which window placement is best. 

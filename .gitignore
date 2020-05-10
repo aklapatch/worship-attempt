@@ -1,9 +1,7 @@
 **/*.o
 *.exe
-*.png
 *.ini
 *.ttf
 *.ini
 *~
 *.db
-imgui/
