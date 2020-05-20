@@ -1,6 +1,5 @@
 
 #include <cairomm/cairomm.h>
-
 #include "structs.h"
 #include "imgui/imgui.h"
 #include "imgui/examples/imgui_impl_glfw.h"
@@ -8,7 +7,7 @@
 #include "sqlite_routines.h"
 #include"imageMenu.h."
 #include"fileMenu.h"
-
+#include "gl_util.h"
 #include <algorithm>
 #include <cstring>
 #include <iostream>
@@ -17,6 +16,39 @@
 // leave this here after all the other headers
 #include"imGLsetup.h"
 
+
+#include"shader_class.h"
+
+const char *vertexShaderSource = "#version 330 core\n"
+    "layout (location = 0) in vec3 vertexPosition_modelspace;\n"
+    "void main()\n"
+    "{\n"
+    "   gl_Position.xyz = vertexPosition_modelspace;\n"
+      "gl_Position.w = 1.0;\n"
+    "}\0";
+const char *fragmentShaderSource = "#version 330 core\n"
+    "out vec3 color;\n"
+    "void main()\n"
+    "{\n"
+    "   color = vec3(1.0f, 0.1f, 0.1f);\n"
+    "}\n\0";
+
+void printglError(int lineNum){
+  std::string output = "";
+  switch(glGetError()){
+    case GL_NO_ERROR: output = "NO ERROR"; break;
+    case GL_INVALID_ENUM: output = "invalid enum"; break;
+    case GL_INVALID_VALUE: output = "invalid value"; break;
+    case GL_INVALID_OPERATION: output = "invalid operation"; break;
+    case GL_INVALID_FRAMEBUFFER_OPERATION: output = "invalid framebuffer op"; break;
+    case GL_OUT_OF_MEMORY: output = "out of memory"; break;
+    case GL_STACK_UNDERFLOW: output = "stack underflow"; break;
+    case GL_STACK_OVERFLOW: output = "stack overflow"; break;
+    default: output = "no recognized error";
+  }
+  std::cerr << "GLError = " << output << " @ " << lineNum << "\n";
+
+  }
 
 static void drawTextOnImage(Cairo::RefPtr<Cairo::Context> cr, std::string text, double font_size) {
 
@@ -525,10 +557,9 @@ int main(int, char **) {
 #else
   // GL 3.0 + GLSL 130
   const char *glsl_version = "#version 130";
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-  // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
-  // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
 #endif
 
   // Create window with graphics context
@@ -566,10 +597,7 @@ int main(int, char **) {
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
 
-  // Setup Dear ImGui style
-
   ImGui::StyleColorsDark();
-  // ImGui::StyleColorsClassic();
 
   // Setup Platform/Renderer bindings
   ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -603,8 +631,6 @@ int main(int, char **) {
   int final_from_to[] = {0, 3, 1, 0, 2, 1, 3, 2};
   cv::mixChannels(&tmp_image, 1, &disp_img, 1, final_from_to, 4);
 
-  GLuint img_tex;
-
   // try executing sqlite commands
   sqlite3 *main_db;
   init_and_open_db(db_name, &main_db);
@@ -613,35 +639,15 @@ int main(int, char **) {
   std::vector<char*> song_names;
   readSongs(main_db, all_song_list, song_names);
   sqlite3_close(main_db);
-
-  // Load Fonts
-  // - If no fonts are loaded, dear imgui will use the default font. You can
-  // also load multiple fonts and use ImGui::PushFont()/PopFont() to select
-  // them.
-  // - AddFontFromFileTTF() will return the ImFont* so you can store it if you
-  // need to select the font among multiple.
-  // - If the file cannot be loaded, the function will return NULL. Please
-  // handle those errors in your application (e.g. use an assertion, or display
-  // an error and quit).
-  // - The fonts will be rasterized at a given size (w/ oversampling) and stored
-  // into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which
-  // ImGui_ImplXXXX_NewFrame below will call.
-  // - Read 'docs/FONTS.txt' for more instructions and details.
-  // - Remember that in C/C++ if you want to include a backslash \ in a string
-  // literal you need to write a double backslash \\ !
-  // io.Fonts->AddFontDefault();
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-  // io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-  // ImFont* font =
-  // io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f,
-  // NULL, io.Fonts->GetGlyphRangesJapanese()); IM_ASSERT(font != NULL);
-
+    //===========================================
   // Our state
   bool show_demo_window = true;
   bool show_another_window = false;
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+  GLuint shaderProgram;
+  GLuint win_tex;
+  GLuint img_tex;
 
   static uint32_t word_buf_size = 512;
   static std::string song_word_buf(word_buf_size, '\0');
@@ -649,19 +655,21 @@ int main(int, char **) {
   static std::string tmp_word_buf(word_buf_size, '\0');
 
   std::vector<image> img_list;
-
+    GLfloat vertices[] = {
+        // positions          // colors           // texture coords
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+    };
+    unsigned int indices[] = {  
+        0, 1, 3, // first triangle
+        1, 2, 3  // second triangle
+    };
+    GLuint VBO, VAO, EBO;
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {
-    // Poll and handle events (inputs, window resize, etc.)
-    // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to
-    // tell if dear imgui wants to use your inputs.
-    // - When io.WantCaptureMouse is true, do not dispatch mouse input data to
-    // your main application.
-    // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input
-    // data to your main application. Generally you may always pass all inputs
-    // to dear imgui, and hide them from your application based on those two
-    // flags.
     glfwPollEvents();
 
     // Start the Dear ImGui frame
@@ -759,34 +767,125 @@ int main(int, char **) {
 
     glfwSwapBuffers(window);
 
+    static bool first_time = true;
     // take care of the fullscreen window last
     if (full_win != NULL && glfwWindowShouldClose(full_win)){
         glfwDestroyWindow(full_win);
+        first_time = true;
         full_win = NULL;
     }
     if (full_win != NULL && !glfwWindowShouldClose(full_win)){
-      glfwMakeContextCurrent(full_win);
 
-      std::cerr << "OpenGL error = " << glGetError() <<" @ " << __LINE__ << "\n";
+      glfwMakeContextCurrent(full_win);
+      if (first_time){
+        first_time = false;
+
+        glGenTextures(1, &win_tex);
+        // init shader
+        GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+        glCompileShader(vertexShader);
+        // check for shader compile errors
+        int success;
+        char infoLog[512];
+        glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+        if (success == GL_FALSE)
+        {
+          glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+          std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        }
+        // fragment shader
+        GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+        glCompileShader(fragmentShader);
+        // check for shader compile errors
+        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+        if (success == GL_FALSE)
+        {
+          glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+          std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+        }
+        // link shaders
+        shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, vertexShader);
+        glAttachShader(shaderProgram, fragmentShader);
+        glLinkProgram(shaderProgram);
+        // check for linking errors
+        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+        if (!success) {
+          glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+          std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        }
+        glDetachShader(shaderProgram, vertexShader);
+        glDetachShader(shaderProgram, fragmentShader);
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+
+        glBindVertexArray(VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+        // position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        // color attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        // texture coord attribute
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+
+      }
 
       int h = mode->height;
       int w = mode->width;
-      // just try making a vector with a gray color to see if this works
-       
-      std::vector<uint8_t> color_data(h*w*3, 128);
+      cv::Mat out_img( w,h, disp_img.type());
+      cv::resize(disp_img,out_img, out_img.size(), 0,0, cv::INTER_CUBIC);
+
+      glBindTexture(GL_TEXTURE_2D, win_tex);
       
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+      glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+      glTexImage2D(GL_TEXTURE_2D, 
+                  0, 
+                  GL_RGBA8, 
+                  w, 
+                  h, 
+                  0, 
+                  GL_RGBA, 
+                  GL_UNSIGNED_BYTE, 
+                  out_img.data);
+
+      
+      glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
+
+
+      glUseProgram(shaderProgram);
+
+      glBindVertexArray(VAO);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
       glfwSwapBuffers(full_win);
-      std::cerr << "OpenGL error = " << glGetError() <<" @ " << __LINE__ << "\n";
-
-
-      double time = glfwGetTime();
     }
 
     glDeleteTextures(1, &img_tex);
 
     glfwMakeContextCurrent(window);
   }
+  glDeleteTextures(1, &win_tex);
 
   // Cleanup
   ImGui_ImplOpenGL3_Shutdown();
