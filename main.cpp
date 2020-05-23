@@ -16,21 +16,28 @@
 // leave this here after all the other headers
 #include"imGLsetup.h"
 
-
 #include"shader_class.h"
 
 const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec3 vertexPosition_modelspace;\n"
+    "layout (location = 0) in vec3 aPos;\n"
+    "layout (location = 1) in vec3 aColor;\n"
+    "layout (location = 2) in vec2 aTexCoord;\n"
+    "out vec3 ourColor;\n"
+    "out vec2 TexCoord;\n"
     "void main()\n"
     "{\n"
-    "   gl_Position.xyz = vertexPosition_modelspace;\n"
-      "gl_Position.w = 1.0;\n"
+    "   gl_Position = vec4(aPos, 1.0);\n"
+      "ourColor = aColor;\n"
+      "TexCoord = vec2(aTexCoord.x, aTexCoord.y);\n"
     "}\0";
 const char *fragmentShaderSource = "#version 330 core\n"
-    "out vec3 color;\n"
+    "out vec4 FragColor;\n"
+    "in vec3 ourColor;\n"
+    "in vec2 TexCoord;\n"
+    "uniform sampler2D texture1;\n"
     "void main()\n"
     "{\n"
-    "   color = vec3(1.0f, 0.1f, 0.1f);\n"
+    "   FragColor = texture(texture1, TexCoord);\n"
     "}\n\0";
 
 void printglError(int lineNum){
@@ -47,8 +54,7 @@ void printglError(int lineNum){
     default: output = "no recognized error";
   }
   std::cerr << "GLError = " << output << " @ " << lineNum << "\n";
-
-  }
+}
 
 static void drawTextOnImage(Cairo::RefPtr<Cairo::Context> cr, std::string text, double font_size) {
 
@@ -142,6 +148,9 @@ static void showMainMenuBar() {
         glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
         glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
         glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
 
         full_win = glfwCreateWindow(mode->width, mode->height,"Full window", monitors[i], NULL);
         glfwSwapInterval(1); // Enable vsync
@@ -246,9 +255,9 @@ std::vector<std::string> sepPara(std::string song_text){
   return output;
 }
 
-    // this algorithm should find brackets [ ] and
-    // assign the text between the brackets to the name field
-    // and assign what follows that (until you get to two \n in a row)
+// this algorithm should find brackets [ ] and
+// assign the text between the brackets to the name field
+// and assign what follows that (until you get to two \n in a row)
 // if you don't find [], then you can make unnamed parts with empty strings
 // for names 
 std::vector<song_part> sepSongParts(std::string song_text) {
@@ -556,9 +565,9 @@ int main(int, char **) {
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Required on Mac
 #else
   // GL 3.0 + GLSL 130
-  const char *glsl_version = "#version 130";
+  const char *glsl_version = "#version 330";
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
 #endif
 
@@ -630,6 +639,8 @@ int main(int, char **) {
   cv::Mat disp_img(tmp_image.size(), tmp_image.type());
   int final_from_to[] = {0, 3, 1, 0, 2, 1, 3, 2};
   cv::mixChannels(&tmp_image, 1, &disp_img, 1, final_from_to, 4);
+      cv::Mat out_img;
+  std::vector<uint8_t> out_vec;
 
   // try executing sqlite commands
   sqlite3 *main_db;
@@ -657,10 +668,10 @@ int main(int, char **) {
   std::vector<image> img_list;
     GLfloat vertices[] = {
         // positions          // colors           // texture coords
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+         1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+         1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+        -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
     };
     unsigned int indices[] = {  
         0, 1, 3, // first triangle
@@ -778,9 +789,9 @@ int main(int, char **) {
 
       glfwMakeContextCurrent(full_win);
       if (first_time){
+        glfwSwapInterval(1); // Enable vsync
         first_time = false;
 
-        glGenTextures(1, &win_tex);
         // init shader
         GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -828,10 +839,10 @@ int main(int, char **) {
         glBindVertexArray(VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
 
         // position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -843,40 +854,51 @@ int main(int, char **) {
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
         glEnableVertexAttribArray(2);
 
+        int h = mode->height;
+        int w = mode->width;
+        out_img = cv::Mat(h,w, disp_img.type());
+        std::cerr << "dims = " << out_img.size() << "\n";
+      
+        glGenTextures(1, &win_tex);
+
       }
 
-      int h = mode->height;
-      int w = mode->width;
-      cv::Mat out_img( w,h, disp_img.type());
-      cv::resize(disp_img,out_img, out_img.size(), 0,0, cv::INTER_CUBIC);
-
+      cv::resize(disp_img, out_img, out_img.size(), 0,0, cv::INTER_CUBIC);
+      cv::Mat final_img(out_img.size(), out_img.type());
+      cv::rotate(out_img, final_img, cv::ROTATE_180);
+      cv::flip(final_img, out_img, 1);
       glBindTexture(GL_TEXTURE_2D, win_tex);
-      
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
       glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+      // this image does not update at all, even if the image data changes
       glTexImage2D(GL_TEXTURE_2D, 
                   0, 
                   GL_RGBA8, 
-                  w, 
-                  h, 
+                  mode->width, 
+                  mode->height, 
                   0, 
                   GL_RGBA, 
                   GL_UNSIGNED_BYTE, 
                   out_img.data);
 
-      
-      glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+      glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
       glClear(GL_COLOR_BUFFER_BIT);
 
-
+      
+      glEnable(GL_TEXTURE_2D);
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, win_tex);
       glUseProgram(shaderProgram);
-
+      glUniform1i(glGetUniformLocation(shaderProgram, "texture1"), 0);
+      
       glBindVertexArray(VAO);
       glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+      
+      glDisable(GL_TEXTURE_2D);
 
       glfwSwapBuffers(full_win);
     }
