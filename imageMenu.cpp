@@ -5,7 +5,6 @@
 std::vector<GLuint> tex_ids(0);
    
 bool imageMenu(std::vector<image> &image_list) {
-    ImGui::Begin("image menu");
 
     static bool open_file_menu = false;
     static std::string new_img = "";
@@ -76,8 +75,6 @@ bool imageMenu(std::vector<image> &image_list) {
     }
 
     ImGui::EndChild();
-
-    ImGui::End();
 
     // open the file menu here
     if (open_file_menu){

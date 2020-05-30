@@ -19,11 +19,10 @@ All of these are the mingw-w64-x86_64 variants of these libraries.
 - there was a memory leak in the image menu, I needed to implement a system where new textures are only generated/allocated if the image_list size changes
 
 ## TODO: What to work on next
-- work on taking over a screen with glfw and displaying an image with text on the full screen.
-  - bind ESC so that it stops taking over the screen when released
-  - resize the background image to match dest screen (and then draw text on it
+- Hot song editing/reloading
+- revise ui into tabs
 - Implement text shadowing, italics, and find a way to load in all the fonts that windows has installed
-  -text color, justification, and other stuff
+- text color, justification, and other stuff
 - schedule saving/import
 - background image selection
 - overwrite images with duplicate names (or data)
@@ -41,18 +40,15 @@ All of these are the mingw-w64-x86_64 variants of these libraries.
 ## TODO: bugs 
 - the menu where you move songs around glitches out and some songs move on their own sometimes.
 - songs in the schedule section, if there are duplicates, selecting the duplicate fails to have the song titles show up in the selection dialog boxes
- - RELATED ^^^ : I cannot select duplicates in the schedule songs dialog (not sure why);
- - when you save a song, the schedule song list does not update with the new song (this is expected, since we copy those songs
-      - however, the bug regarding selecting duplicates still exists
+ - RELATED ^^^ : I cannot select duplicates in the schedule songs dialog (not sure why)
 
 ## TODO: usability
 - warnings ifa  song is not formatted correctly
 - warnings if a song is being overwritten (name collision)
 - building guide + makpkg script
 - static linking:
-    - build opencv statically (that's probably a nightmare)
-    - build everyting that is not static statically
-    
+  - build opencv statically (that's probably a nightmare)
+  - build everyting that is not static statically
 
 ## ui notes
 - I still need to figure out which window placement is best. 

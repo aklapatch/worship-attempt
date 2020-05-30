@@ -490,7 +490,6 @@ static uint32_t scheduleBuilder(std::vector<song> &all_songs , std::vector<song>
 
 static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sched_songs, std::vector<char*>& song_names ,std::string & song_word_buf){
 
-  ImGui::Begin("Schedule");
   ImGui::BeginChild("ChildL", ImVec2(ImGui::GetWindowContentRegionWidth()*0.5f,400), true);
   bool reload_songs = songEditor(); 
   ImGui::EndChild();
@@ -544,9 +543,6 @@ static void schedSongUnit(std::vector<song> &all_songs , std::vector<song>& sche
       }
     }
   }
-
-  ImGui::End(); // Schedule
-  
 }
 
 int main(int, char **) {
@@ -603,8 +599,6 @@ int main(int, char **) {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImGuiIO &io = ImGui::GetIO();
-  (void)io;
 
   ImGui::StyleColorsDark();
 
@@ -612,7 +606,10 @@ int main(int, char **) {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
 
-  cv::Mat orig_image = cv::imread("bell_v22.png", cv::IMREAD_COLOR);
+  ImGuiIO &io = ImGui::GetIO();
+  ImFont* font1 = io.Fonts->AddFontFromFileTTF("ubuntu-font-family/Ubuntu-C.ttf", 16.0f);
+
+  cv::Mat orig_image = cv::imread("mountains.jpg", cv::IMREAD_COLOR);
 
   // convert to argb for cairo
   cv::cvtColor(orig_image, orig_image, cv::COLOR_BGR2BGRA);
@@ -666,18 +663,18 @@ int main(int, char **) {
   static std::string tmp_word_buf(word_buf_size, '\0');
 
   std::vector<image> img_list;
-    GLfloat vertices[] = {
-        // positions          // colors           // texture coords
-         1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-         1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-        -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
-    };
-    unsigned int indices[] = {  
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
-    };
-    GLuint VBO, VAO, EBO;
+  GLfloat vertices[] = {
+    // positions          // colors           // texture coords
+    1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+    1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+    -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+    -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left 
+  };
+  unsigned int indices[] = {  
+    0, 1, 3, // first triangle
+    1, 2, 3  // second triangle
+  };
+  GLuint VBO, VAO, EBO;
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {
@@ -689,78 +686,92 @@ int main(int, char **) {
     ImGui::NewFrame();
 
     showMainMenuBar();
-    ImGuiIO &io = ImGui::GetIO();
 
-    // I tried to make this return an int32_t and then the window failed to draw
-     schedSongUnit(all_song_list,sched_song_list, song_names, song_word_buf );
+    // the font gets corrupted sometimes if you remove these two lines
+    ImGui::PushFont(font1);
+    ImGui::PopFont();
+
+    ImGui::Begin("Main Window");
+    ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+    if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags)){
+      // I tried to make this return an int32_t and then the window failed to draw
+
+    if (ImGui::BeginTabItem("Schedule Stuff")){
+      schedSongUnit(all_song_list,sched_song_list, song_names, song_word_buf );
+      ImGui::EndTabItem();
+    }
 
      
-    ImGui::Begin("img_test");
-    static int font_size = 10;
-    ImGui::InputInt("font size", &font_size);
-    // write text on image and do all the things you need to do to show it.
-    //
-    // reload orig image into cairo
-    // TODO: only reload image when text or font size changes
-    cv::mixChannels(&orig_image, 1, &cairo_img, 1, from_to, 4);
-    surf =
-        Cairo::ImageSurface::create(cairo_img.data, Cairo::FORMAT_ARGB32,
-                                    orig_image.cols, orig_image.rows, stride);
-    cr = Cairo::Context::create(surf);
-    cr->move_to(50, 100);
-    cr->set_font_face(font);
-    cr->set_font_size(font_size);
-    drawTextOnImage(cr, song_word_buf, font_size);
+    if(ImGui::BeginTabItem("img_test")){
+      static int font_size = 10;
+      ImGui::InputInt("font size", &font_size);
+      // write text on image and do all the things you need to do to show it.
+      //
+      // reload orig image into cairo
+      // TODO: only reload image when text or font size changes
+      cv::mixChannels(&orig_image, 1, &cairo_img, 1, from_to, 4);
+      surf =
+          Cairo::ImageSurface::create(cairo_img.data, Cairo::FORMAT_ARGB32,
+                                      orig_image.cols, orig_image.rows, stride);
+      cr = Cairo::Context::create(surf);
+      cr->move_to(50, 100);
+      cr->set_font_face(font);
+      cr->set_font_size(font_size);
+      drawTextOnImage(cr, song_word_buf, font_size);
 
-    // TODO: during the copy, check if something is different, and if it is,
-    // updated the texture.
+      // TODO: during the copy, check if something is different, and if it is,
+      // updated the texture.
 
-    // go through the image and separate the \n bits into separate strings.
-    std::copy(surf->get_data(),
-              surf->get_data() + (orig_image.rows * orig_image.cols * 4),
-              tmp_image.data);
+      // go through the image and separate the \n bits into separate strings.
+      std::copy(surf->get_data(),
+                surf->get_data() + (orig_image.rows * orig_image.cols * 4),
+                tmp_image.data);
 
-    int final_from_to[] = {0, 3, 1, 0, 2, 1, 3, 2};
-    cv::mixChannels(&tmp_image, 1, &disp_img, 1, final_from_to, 4);
+      int final_from_to[] = {0, 3, 1, 0, 2, 1, 3, 2};
+      cv::mixChannels(&tmp_image, 1, &disp_img, 1, final_from_to, 4);
 
-    //  reload texture with image data
-    //  TODO: only reload texture when setting or text changes.
-    glBindTexture(GL_TEXTURE_2D, img_tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      //  reload texture with image data
+      //  TODO: only reload texture when setting or text changes.
+      glBindTexture(GL_TEXTURE_2D, img_tex);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tmp_image.cols, tmp_image.rows, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, disp_img.data);
+      glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tmp_image.cols, tmp_image.rows, 0,
+                   GL_RGBA, GL_UNSIGNED_BYTE, disp_img.data);
 
-    ImGui::Image((void *)(intptr_t)img_tex,
-                 ImVec2(tmp_image.cols, tmp_image.rows));
+      ImGui::Image((void *)(intptr_t)img_tex,
+                   ImVec2(tmp_image.cols, tmp_image.rows));
 
-
-    ImGui::End();
+      ImGui::EndTabItem();
+    }
 
     static bool reload_imgs = true;
 
-    if(reload_imgs){
+    if (ImGui::BeginTabItem("Image Menu")){
+      if(reload_imgs){
 
-      db_error err = readImgs(img_list);
+        db_error err = readImgs(img_list);
+      }
+      reload_imgs = imageMenu(img_list);
+      ImGui::EndTabItem();
     }
-    reload_imgs = imageMenu(img_list);
+    ImGui::EndTabBar();
+  }
+
+    ImGui::End();
     
 
     if (show_demo_window)
       ImGui::ShowDemoWindow(&show_demo_window);
 
     {
-
       ImGui::Begin("Hello, world!"); // Create a window called "Hello, world!"
                                      // and append into it.
 
       ImGui::Checkbox(
           "Demo Window",
           &show_demo_window); // Edit bools storing our window open/close state
-
-
 
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                   1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
