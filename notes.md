@@ -16,7 +16,7 @@ All of these are the mingw-w64-x86_64 variants of these libraries.
 - imgui
 
 ## misc
-- there was a memory leak in the image menu, I needed to implement a system where new textures are only generated/allocated if the image_list size changes
+- (done sort of)there was a memory leak in the image menu, I needed to implement a system where new textures are only generated/allocated if the image_list size changes
 
 ## TODO: What to work on next
 - Hot song editing/reloading
@@ -41,6 +41,7 @@ All of these are the mingw-w64-x86_64 variants of these libraries.
 - the menu where you move songs around glitches out and some songs move on their own sometimes.
 - songs in the schedule section, if there are duplicates, selecting the duplicate fails to have the song titles show up in the selection dialog boxes
  - RELATED ^^^ : I cannot select duplicates in the schedule songs dialog (not sure why)
+ - image list on img_test does not show images until you click onto the image import tab.
 
 ## TODO: usability
 - warnings ifa  song is not formatted correctly

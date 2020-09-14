@@ -25,7 +25,7 @@ struct image {
 // will need them for displaying different parts of songs
 // so we don't need to separate them for storage
 struct song {
-  uint64_t id; // the sqlite rowid
+  uint64_t row_id; // the sqlite rowid
   uint64_t background_id;
   std::string name;
   std::string body; // body of the song, verse, chorus, etc.

@@ -89,7 +89,7 @@ bool imageMenu(std::vector<image> &image_list) {
             // use jpg compression (it's fast)
             std::vector<unsigned char> img_out = {};
             // lossless jpg compression
-            bool rc = cv::imencode(".jpg", img_arr, img_out, {cv::IMWRITE_JPEG_QUALITY, 100});
+            cv::imencode(".jpg", img_arr, img_out, {cv::IMWRITE_JPEG_QUALITY, 100});
 
             // pass the image buffer and the filename to be saved in the database.
             // adding the +1 excludes the '/'

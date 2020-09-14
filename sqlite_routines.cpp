@@ -159,7 +159,7 @@ int storeCallback(void * data, int argc, char **argv, char **colname){
   
   // we can change the order in the query if necessary
   song tmp;
-  tmp.id =  atoi(argv[0]);
+  tmp.row_id =  atoi(argv[0]);
   tmp.background_id = atoi(argv[4]);
   tmp.name = argv[1];
   tmp.body = argv[2];
@@ -202,7 +202,6 @@ db_error readSongs(sqlite3 * db, std::vector<song>& all_songs, std::vector<char*
   //const char *picture_sql_cmd = "create table if not exists pictures("
 //" name text,data blob);";
 db_error saveImg(std::vector<unsigned char> img_data, std::string img_name){
-  char * errmsg;
 
   // open db
   sqlite3 *db;
@@ -249,17 +248,7 @@ int imgCallback(void * data, int argc, char **argv, char **colname){
   image tmp;
   tmp.name = argv[0];
   uint32_t size = atoi(argv[1]);
-  std::vector<unsigned char> img_data = {};
-  img_data.resize(size);
-  uint32_t i = 0;
-
-  while (i <  size){
-
-    img_data[i] = argv[2][i];
-
-    ++i;
-
-  }
+  std::vector<unsigned char> img_data(argv[2], argv[2] + size)  ;
 
   tmp.datamat = cv::imdecode(img_data, cv::IMREAD_COLOR);
   tmp.rowid = atoi(argv[3]);
@@ -276,6 +265,8 @@ db_error readImgs(std::vector<image>& out_list){
   sqlite3 *db;
 
   out_list.clear();
+  out_list.resize(0);
+
   int rc = sqlite3_open(db_name, &db);
 	
   if (rc) {

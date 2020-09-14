@@ -48,7 +48,7 @@ bool fileMenu(std::string &file_name){
 
     //list all the files in the current dir
     bool reload_files = false;
-    uint32_t i = -1, double_clicked = -1;
+    int32_t i = -1, double_clicked = -1;
     // list of files in current folder
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
     if(ImGui::BeginChild("file list",ImVec2(0, 400), true, window_flags )){
