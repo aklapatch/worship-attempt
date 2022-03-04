@@ -5,3 +5,6 @@
 *.ini
 *~
 *.db
+# Added by cargo
+
+/target

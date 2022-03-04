@@ -1,0 +1,12 @@
+[package]
+name = "worship-attempt"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+fltk = { version = "^1.2", features = ["fltk-bundled", "enable-glwindow", "use-ninja" ] }
+# had to add a empty text file called ocvrs_ephemeral.hpp to .cargo\registry\src\github.com-1ecc6299db9ec823\opencv-0.63.0\src_cpp\ to get this to build
+# got the workaround from https://github.com/twistedfall/opencv-rust/issues/251
+opencv = "0.63"

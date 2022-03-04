@@ -1,0 +1,22 @@
+{
+    "tasks": [
+        {
+            "type": "process",
+            "label": "build project",
+            "command": "C:/tools/msys64/mingw64/bin/cargo",
+            "args": [],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": ""
+        }
+    ],
+    "version": "2.0.0"
+}
