@@ -1,8 +1,12 @@
 use fltk::{app, button::Button, frame::Frame, prelude::*, window::Window, image::*, enums };
+use std::cell::RefCell;
 
 #[derive(Debug, Clone, Copy)]
-pub enum Message{ Show,
-    ChangePic(usize),
+pub enum Message{ 
+    Show,
+    NextImg,
+    PrevImg,
+
 }
 
 fn main() {
@@ -24,29 +28,25 @@ fn main() {
     wind1.end();
     wind1.hide();
 
-    let img_arr = [ SharedImage::load("./worship extreme main menu.png").expect("Failed"), SharedImage::load("./sunset.jpg").expect("failed") ];
-    let mut img_i: usize = 0;
-    let mut img_arr_len = img_arr.len();
+    let img_arr = vec![ SharedImage::load("./worship extreme main menu.png").expect("Failed"), SharedImage::load("./sunset.jpg").expect("failed") ];
 
     let (s, r) = app::channel::<Message>();
 
     but.set_callback( move |_| s.send(Message::Show));
-    //s.send(Message::Show));
 
     img_frame.handle( move |_, ev| match ev {
             enums::Event::KeyUp => {
-            img_i += 1;
-            if img_i >= img_arr_len {
-                img_i = 0;
-            }
             if app::event_key() == enums::Key::Right {
-                s.send(Message::ChangePic(img_i));
+                s.send(Message::NextImg);
+            } else if app::event_key() == enums::Key::Left {
+                s.send(Message::PrevImg);
             }
             true
         }
         _ => false,
     });
 
+    let mut img_i: usize = 0;
     while app.wait() {
         if let Some(msg) = r.recv() {
             match msg {
@@ -54,14 +54,24 @@ fn main() {
                     wind1.show();
                     img_frame.set_size(wind1.pixel_w(), wind1.pixel_h());
                     img_frame.set_pos(wind1.x(), wind1.y());
-                    img_frame.set_image_scaled(Some(img_arr[0].copy()));
+                    img_frame.set_image_scaled(Some(img_arr[0].clone()));
                     img_frame.redraw();
                 },
-                Message::ChangePic(pic_i) => {
-                    img_frame.set_image_scaled(Some(img_arr[pic_i].copy()));
-                    img_frame.redraw();
+                Message::NextImg => {
+                    if img_i < img_arr.len() - 1 {
+                        img_i += 1;
+                    }
+                    img_frame.set_image_scaled(Some(img_arr[img_i].clone()));
                     wind1.redraw();
                 },
+                Message::PrevImg => {
+                    if img_i > 0 {
+                        img_i -= 1;
+                    }
+                    img_frame.set_image_scaled(Some(img_arr[img_i].copy()));
+                    wind1.redraw();
+                },
+                _ => {}
             }
         }
     }
