@@ -6,15 +6,13 @@ pub enum Message{
     Show,
     NextImg,
     PrevImg,
-
 }
 
 fn main() {
     let app = app::App::default().with_scheme(app::Scheme::Gleam);
     let mut wind = Window::new(100, 100, 400, 300, "Editor window");
-
-    let mut frame = Frame::new(0, 0, 400, 200, "");
     let mut but = Button::new(160, 210, 80, 40, "open window");
+    let mut img_but = Button::new(160, 110, 80, 40, "add img");
     wind.make_resizable(true);
     wind.clear_modal_states();
     wind.end();
@@ -34,7 +32,7 @@ fn main() {
 
     but.set_callback( move |_| s.send(Message::Show));
 
-    img_frame.handle( move |_, ev| match ev {
+    img_frame.handle(move |this_frame, ev| match ev {
             enums::Event::KeyUp => {
             if app::event_key() == enums::Key::Right {
                 s.send(Message::NextImg);
