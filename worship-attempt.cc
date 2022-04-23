@@ -24,15 +24,16 @@
 #include <FL/platform.H>
 #include <FL/Fl_Input_Choice.H>
 #include <FL/Fl_Int_Input.H>
+#include <FL/Fl_Color_Chooser.H>
 
 static std::vector<Fl_Image*> im_vec;
 
 class PresWin : public Fl_Window {
     public:
         Fl_Fontsize font_size = 50; 
+        uchar r = 0, g = 0, b = 0;
         Fl_Font font = FL_HELVETICA;
         int x = 0, y = 0, w = 200, h = 200;
-        Fl_Color text_color = FL_WHITE;
         Fl_Image *cur_img = NULL, *next_img = NULL;
         std::string cur_txt = "", next_txt = "";
     
@@ -40,7 +41,8 @@ class PresWin : public Fl_Window {
 
     void draw() {
         cur_img->draw(0, 0);
-        fl_color(text_color);
+
+        fl_color(r, g, b);
         fl_font(font, font_size);
         fl_draw(cur_txt.c_str(), x, y, w, h, FL_ALIGN_CENTER, NULL, 0);
     }
@@ -57,6 +59,7 @@ Fl_Int_Input font_size_in(300, 300, 50, 30, "font size");
 Fl_Int_Input x_in(300, 370, 50, 30, "x");
 Fl_Int_Input y_in(300, 440, 50, 30, "y");
 Fl_Input text_in(300, 510, 200, 30, "text in");
+Fl_Color_Chooser color_in(400, 50, 200, 100, "font color");
 
 #define MAP_FONT(x) STR(x), x
 std::map<std::string, Fl_Font> font_val_map = {
@@ -73,8 +76,12 @@ std::map<std::string, Fl_Font> font_val_map = {
     {MAP_FONT(FL_TIMES_BOLD_ITALIC)},
 };
 
+#define TOCHAR(x) (uchar)((x)*255.0)
 void show_full_win(Fl_Widget *w, void *)
 {
+    pres_win.r = TOCHAR(color_in.r());
+    pres_win.g = TOCHAR(color_in.g());
+    pres_win.b = TOCHAR(color_in.b());
     pres_win.cur_txt = text_in.value();
     pres_win.cur_img = im_vec[0];
     pres_win.x = atoi(x_in.value());
@@ -95,6 +102,9 @@ int main(int argc, char *argv[]){
     x_in.value("700");
     y_in.value("700");
     font_size_in.value("50");
+    // set font color to rgb mode
+    color_in.mode(0);
+    color_in.rgb(1, 1, 1);
     text_in.value("test label");
     present.callback(show_full_win);
 

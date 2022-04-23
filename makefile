@@ -1,6 +1,6 @@
 CXX = $(shell fltk-config --cxx)
-CXXFLAGS = $(shell fltk-config --cflags --use-images --use-gl)
-#CXXFLAGS += -std=c++11
+CXXFLAGS = $(shell fltk-config --use-images --use-gl --cxxflags) -Og
+LDFLAGS = $(shell fltk-config --use-images --use-gl --ldstaticflags)
 main:
-	fltk-config -g --use-images --use-gl --compile worship-attempt.cc 
+	$(CXX) $(CXXFLAGS) -g worship-attempt.cc -o worship-attempt.exe $(LDFLAGS)
 	./worship-attempt
