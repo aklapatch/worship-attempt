@@ -33,7 +33,6 @@ class PresWin : public Fl_Window {
         Fl_Fontsize font_size = 50; 
         uchar r = 0, g = 0, b = 0;
         Fl_Font font = FL_HELVETICA;
-        int x = 0, y = 0, w = 200, h = 200;
         Fl_Image *cur_img = NULL, *next_img = NULL;
         std::string cur_txt = "", next_txt = "";
     
@@ -44,7 +43,11 @@ class PresWin : public Fl_Window {
 
         fl_color(r, g, b);
         fl_font(font, font_size);
-        fl_draw(cur_txt.c_str(), x, y, w, h, FL_ALIGN_CENTER, NULL, 0);
+        // try to put the text at the center of the screen
+        int tmp_w, tmp_h;
+        fl_measure(cur_txt.c_str(), tmp_w, tmp_h);
+        int txt_x = this->x_root() + this->w()/2 - (tmp_w/2), txt_y = this->y_root() + (this->h()/2) - (tmp_h/2);
+        fl_draw(cur_txt.c_str(), txt_x, txt_y, tmp_w, tmp_h, FL_ALIGN_CENTER, NULL, 0);
     }
 };
 
@@ -56,8 +59,6 @@ Fl_Window editor_window(720, 720, "Editor Window");
 Fl_Button present(160, 210, 80, 40, "Present");
 Fl_Input_Choice font_in(100, 100, 200, 20, "font number");
 Fl_Int_Input font_size_in(300, 300, 50, 30, "font size");
-Fl_Int_Input x_in(300, 370, 50, 30, "x");
-Fl_Int_Input y_in(300, 440, 50, 30, "y");
 Fl_Input text_in(300, 510, 200, 30, "text in");
 Fl_Color_Chooser color_in(400, 50, 200, 100, "font color");
 
@@ -84,8 +85,6 @@ void show_full_win(Fl_Widget *w, void *)
     pres_win.b = TOCHAR(color_in.b());
     pres_win.cur_txt = text_in.value();
     pres_win.cur_img = im_vec[0];
-    pres_win.x = atoi(x_in.value());
-    pres_win.y = atoi(y_in.value());
     pres_win.font_size = atoi(font_size_in.value());
     pres_win.font = font_val_map[font_in.value()];
     pres_win.show();
@@ -99,8 +98,6 @@ int main(int argc, char *argv[]){
         font_in.add(x.first.c_str());
     }
     font_in.value(STR(FL_HELVETICA));
-    x_in.value("700");
-    y_in.value("700");
     font_size_in.value("50");
     // set font color to rgb mode
     color_in.mode(0);
