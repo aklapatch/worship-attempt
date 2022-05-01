@@ -6,6 +6,7 @@
 
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
+#include <FL/Fl_Scroll.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Group.H>
@@ -27,6 +28,41 @@
 #include <FL/Fl_Color_Chooser.H>
 
 static std::vector<Fl_Image*> im_vec;
+
+// The editing interface will look a little like Google slides.
+// With the list of slides on the left and a preview more in the center.
+// Different songs can be selected with a dropdown choose menu
+
+class EditSlide: public Fl_Group {
+    public:
+        Fl_Image *img = NULL;
+        Fl_Font font = FL_HELVETICA;
+        Fl_Button im_button, pres_button;
+
+    EditSlide(int x, int y, int w, int h, const char *label = "edit slide", Fl_Image* in_img=NULL) :
+        Fl_Group(x, y, w, h, label),
+        im_button(x, y, w, h),
+        pres_button(x, y, w, h, "Present") {
+        end();
+
+        int txt_x, txt_y, txt_w, txt_h;
+        fl_font(pres_button.labelfont(), pres_button.labelsize());
+        fl_text_extents("Present", txt_x, txt_y, txt_w, txt_h);
+        pres_button.resize(x, y + im_button.h(), txt_w, txt_h);
+        this->resize(x, y, im_button.w() + 50, im_button.h() + pres_button.h());
+    }
+};
+
+struct Song {
+    Fl_Font font = FL_HELVETICA;
+    Fl_Fontsize font_size = 50;
+    std::vector<std::string> lyrics = {};
+    std::string background_name = "";
+};
+
+struct Set {
+    std::vector<Song> songs = {};
+};
 
 class PresWin : public Fl_Window {
     public:
@@ -56,11 +92,12 @@ static PresWin pres_win(0, 0, 0, 0, "Pres window");
 #define STR(x) #x
 
 Fl_Window editor_window(720, 720, "Editor Window");
-Fl_Button present(160, 210, 80, 40, "Present");
+Fl_Button present(300, 210, 80, 40, "Present");
 Fl_Input_Choice font_in(100, 100, 200, 20, "font number");
 Fl_Int_Input font_size_in(300, 300, 50, 30, "font size");
 Fl_Input text_in(300, 510, 200, 30, "text in");
 Fl_Color_Chooser color_in(400, 50, 200, 100, "font color");
+Fl_Scroll slide_edit_list(50, 200, 0, 0, "Slides");
 
 #define MAP_FONT(x) STR(x), x
 std::map<std::string, Fl_Font> font_val_map = {
@@ -91,6 +128,7 @@ void show_full_win(Fl_Widget *w, void *)
 }
 
 int main(int argc, char *argv[]){
+    editor_window.end();
     pres_win.fullscreen();
     im_vec.push_back(Fl_PNG_Image("./worship extreme main menu.png").copy());
 
@@ -104,7 +142,21 @@ int main(int argc, char *argv[]){
     color_in.rgb(1, 1, 1);
     text_in.value("test label");
     present.callback(show_full_win);
+    Fl_Button im_button(0, 0, 160, 90), p_button(0, im_button.h(), 0, 0, "Present");
+    int txt_x, txt_y, txt_w, txt_h;
+    fl_font(p_button.labelfont(), p_button.labelsize());
+    fl_text_extents("Present", txt_x, txt_y, txt_w, txt_h);
+    p_button.resize(txt_w, im_button.h(), txt_w + 10, txt_h + 10);
+    im_button.image(im_vec[0]->copy(im_button.w(), im_button.h()));
+    slide_edit_list.add(im_button);
+    slide_edit_list.add(p_button);
+    slide_edit_list.size(im_button.w() + slide_edit_list.scrollbar_size(), im_button.h() + slide_edit_list.scrollbar_size() +  p_button.h());
+
+    int w = slide_edit_list.w();
+    int h = slide_edit_list.h();
 
     editor_window.show();
+    slide_edit_list.scroll_to(0, 0);
+    slide_edit_list.redraw();
     return Fl::run();
 }
