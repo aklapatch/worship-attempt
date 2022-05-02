@@ -53,6 +53,13 @@ class EditSlide: public Fl_Group {
     }
 };
 
+// current list of songs that can be edited
+static struct {
+    Fl_Font font = FL_HELVETICA;
+    Fl_Fontsize font_size = 50;
+    std::vector<std::string> lyrics = {};
+    std::string background_name = "";
+} song_edit_list;
 struct Song {
     Fl_Font font = FL_HELVETICA;
     Fl_Fontsize font_size = 50;
@@ -142,11 +149,12 @@ int main(int argc, char *argv[]){
     color_in.rgb(1, 1, 1);
     text_in.value("test label");
     present.callback(show_full_win);
-    Fl_Button im_button(0, 0, 160, 90), p_button(0, im_button.h(), 0, 0, "Present");
+    Fl_Button im_button(slide_edit_list.x(), slide_edit_list.y(), 160, 90),
+    p_button(slide_edit_list.x(), slide_edit_list.y() + im_button.h(), 0, 0, "Present");
     int txt_x, txt_y, txt_w, txt_h;
     fl_font(p_button.labelfont(), p_button.labelsize());
     fl_text_extents("Present", txt_x, txt_y, txt_w, txt_h);
-    p_button.resize(txt_w, im_button.h(), txt_w + 10, txt_h + 10);
+    p_button.size(im_button.w(), txt_h + 10);
     im_button.image(im_vec[0]->copy(im_button.w(), im_button.h()));
     slide_edit_list.add(im_button);
     slide_edit_list.add(p_button);
