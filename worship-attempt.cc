@@ -35,9 +35,43 @@ static std::vector<Fl_Image*> im_vec;
 
 #define TXT_MARGIN (10)
 
-class EditSlide: public Fl_Group {
-    Fl_Button im_button, pres_button;
+class PreviewButton : public Fl_Button {
     public:
+        Fl_Fontsize font_size = 50; 
+        uchar r = 0, g = 0, b = 0;
+        Fl_Font font = FL_HELVETICA;
+        Fl_Image *full_img = NULL;
+        std::string txt = "";
+
+    PreviewButton(int x, int y, int w, int h, Fl_Image *img = NULL) : 
+        Fl_Button(x, y, w, h, "") {
+
+        // keep a reference of the full size image
+        full_img = img;
+    }
+    void draw() {
+        if (full_img != NULL){
+            full_img->draw(this->x(), this->y(), this->w(), this->h(), 0, 0);
+        }
+
+        fl_color(r, g, b);
+        fl_font(font, font_size);
+        // try to put the text at the center of the screen
+        int tmp_w, tmp_h;
+        fl_measure(txt.c_str(), tmp_w, tmp_h);
+        int txt_x = this->x() + this->w()/2 - (tmp_w/2), txt_y = this->y() + (this->h()/2) - (tmp_h/2);
+        fl_draw(txt.c_str(), txt_x, txt_y, tmp_w, tmp_h, FL_ALIGN_CENTER, NULL, 0);
+
+        // draw a rectangle to show that this is a button
+        fl_rect(this->x(), this->y(), this->w(), this->h());
+    }
+};
+
+// TODO: add function to push content to presWin, then make the pre_button callback call that function.
+class EditSlide: public Fl_Group {
+    public:
+        PreviewButton im_button;
+        Fl_Button pres_button;
         Fl_Image *img = NULL;
         Fl_Font font = FL_HELVETICA;
         std::string lyric = "";
@@ -47,12 +81,12 @@ class EditSlide: public Fl_Group {
         // The image button didn't come up
         Fl_Group(x, y, w, 1, label),
         im_button(x, y, w, 0),
-        pres_button(x, y, w, 0, "Present") {
+        pres_button(x, y, w, 0, "Show") {
         end();
 
         int txt_x, txt_y, txt_w, txt_h;
         fl_font(pres_button.labelfont(), pres_button.labelsize());
-        fl_text_extents("Present", txt_x, txt_y, txt_w, txt_h);
+        fl_text_extents("Show", txt_x, txt_y, txt_w, txt_h);
         txt_w += TXT_MARGIN, txt_h += TXT_MARGIN;
         // keep the w over txt_w
         w = txt_w > w ? txt_w : w;
@@ -162,6 +196,16 @@ void show_full_win(Fl_Widget *w, void *)
     pres_win.show();
 }
 
+// TODO: bring up edit window
+void edit_cb(Fl_Widget *w, void*){
+    std::cout << "stes";
+}
+
+// TODO: have the present buttons push content to the main window.
+void show_cb(Fl_Widget *w, void*){
+
+}
+
 int main(int argc, char *argv[]){
     editor_window.end();
     pres_win.fullscreen();
@@ -177,7 +221,7 @@ int main(int argc, char *argv[]){
     color_in.rgb(1, 1, 1);
     text_in.value("test label");
     present.callback(show_full_win);
-    EditSlide slide(slide_edit_list.x(), slide_edit_list.y(), 100);
+    EditSlide slide(slide_edit_list.x(), slide_edit_list.y(), 300);
     slide_edit_list.add(slide);
     slide_edit_list.size(slide.w() + slide_edit_list.scrollbar_size(), slide.h() + slide_edit_list.scrollbar_size());
 
