@@ -33,23 +33,37 @@ static std::vector<Fl_Image*> im_vec;
 // With the list of slides on the left and a preview more in the center.
 // Different songs can be selected with a dropdown choose menu
 
+#define TXT_MARGIN (10)
+
 class EditSlide: public Fl_Group {
+    Fl_Button im_button, pres_button;
     public:
         Fl_Image *img = NULL;
         Fl_Font font = FL_HELVETICA;
-        Fl_Button im_button, pres_button;
+        std::string lyric = "";
 
-    EditSlide(int x, int y, int w, int h, const char *label = "edit slide", Fl_Image* in_img=NULL) :
-        Fl_Group(x, y, w, h, label),
-        im_button(x, y, w, h),
-        pres_button(x, y, w, h, "Present") {
+    EditSlide(int x, int y, int w, const char *label = "edit slide", Fl_Image* in_img=NULL) :
+        // The 1 here needs to stay a 1. Tried 0 and 
+        // The image button didn't come up
+        Fl_Group(x, y, w, 1, label),
+        im_button(x, y, w, 0),
+        pres_button(x, y, w, 0, "Present") {
         end();
 
         int txt_x, txt_y, txt_w, txt_h;
         fl_font(pres_button.labelfont(), pres_button.labelsize());
         fl_text_extents("Present", txt_x, txt_y, txt_w, txt_h);
-        pres_button.resize(x, y + im_button.h(), txt_w, txt_h);
-        this->resize(x, y, im_button.w() + 50, im_button.h() + pres_button.h());
+        txt_w += TXT_MARGIN, txt_h += TXT_MARGIN;
+        // keep the w over txt_w
+        w = txt_w > w ? txt_w : w;
+
+        //adjust the image button to be a 16/9 aspect ratio
+        int ratio_h = (w*9)/16;
+        // doing this resize after resizing the widgets messes things up.
+        this->size(w, ratio_h + txt_h);
+
+        im_button.size(w, ratio_h);
+        pres_button.resize(x, y + ratio_h, w, txt_h);
     }
 };
 
@@ -60,15 +74,28 @@ static struct {
     std::vector<std::string> lyrics = {};
     std::string background_name = "";
 } song_edit_list;
-struct Song {
+
+struct SlideAndButton {
+    // full size image. The Fl_Button takes a copy
+    Fl_Image *in_img = NULL;
+    Fl_Button im, pres;
+    Fl_Font font = FL_HELVETICA;
+    Fl_Fontsize f_size = 50;
+    std::string lyrics = "";
+};
+
+struct Slides {
     Fl_Font font = FL_HELVETICA;
     Fl_Fontsize font_size = 50;
     std::vector<std::string> lyrics = {};
+    Fl_Image *full_size_im = NULL;
     std::string background_name = "";
 };
 
+static Slides edit_slides;
+
 struct Set {
-    std::vector<Song> songs = {};
+    std::vector<Slides> slides = {};
 };
 
 class PresWin : public Fl_Window {
@@ -104,6 +131,7 @@ Fl_Input_Choice font_in(100, 100, 200, 20, "font number");
 Fl_Int_Input font_size_in(300, 300, 50, 30, "font size");
 Fl_Input text_in(300, 510, 200, 30, "text in");
 Fl_Color_Chooser color_in(400, 50, 200, 100, "font color");
+Fl_Button add_slide_b(200, 150, 25, 25, "+");
 Fl_Scroll slide_edit_list(50, 200, 0, 0, "Slides");
 
 #define MAP_FONT(x) STR(x), x
@@ -149,16 +177,9 @@ int main(int argc, char *argv[]){
     color_in.rgb(1, 1, 1);
     text_in.value("test label");
     present.callback(show_full_win);
-    Fl_Button im_button(slide_edit_list.x(), slide_edit_list.y(), 160, 90),
-    p_button(slide_edit_list.x(), slide_edit_list.y() + im_button.h(), 0, 0, "Present");
-    int txt_x, txt_y, txt_w, txt_h;
-    fl_font(p_button.labelfont(), p_button.labelsize());
-    fl_text_extents("Present", txt_x, txt_y, txt_w, txt_h);
-    p_button.size(im_button.w(), txt_h + 10);
-    im_button.image(im_vec[0]->copy(im_button.w(), im_button.h()));
-    slide_edit_list.add(im_button);
-    slide_edit_list.add(p_button);
-    slide_edit_list.size(im_button.w() + slide_edit_list.scrollbar_size(), im_button.h() + slide_edit_list.scrollbar_size() +  p_button.h());
+    EditSlide slide(slide_edit_list.x(), slide_edit_list.y(), 100);
+    slide_edit_list.add(slide);
+    slide_edit_list.size(slide.w() + slide_edit_list.scrollbar_size(), slide.h() + slide_edit_list.scrollbar_size());
 
     int w = slide_edit_list.w();
     int h = slide_edit_list.h();
