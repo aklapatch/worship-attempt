@@ -40,7 +40,7 @@ class PreviewButton : public Fl_Button {
         Fl_Fontsize font_size = 50; 
         uchar r = 0, g = 0, b = 0;
         Fl_Font font = FL_HELVETICA;
-        Fl_Image *full_img = NULL;
+        Fl_Image *full_img = NULL, *scaled_img = NULL;
         std::string txt = "";
 
     PreviewButton(int x, int y, int w, int h, Fl_Image *img = NULL) : 
@@ -48,10 +48,19 @@ class PreviewButton : public Fl_Button {
 
         // keep a reference of the full size image
         full_img = img;
+        if (img != NULL){
+            scaled_img = img->copy(this->w(), this->h());
+        }
     }
     void draw() {
-        if (full_img != NULL){
-            full_img->draw(this->x(), this->y(), this->w(), this->h(), 0, 0);
+        if (scaled_img != NULL && (scaled_img->w() != this->w() || scaled_img->h() != this->h())){
+            scaled_img = NULL;
+        }
+        if (scaled_img == NULL && full_img != NULL){
+            scaled_img = full_img->copy(this->w(), this->h());
+        }
+        if (scaled_img != NULL){
+            scaled_img->draw(this->x(), this->y(), this->w(), this->h());
         }
 
         fl_color(r, g, b);
@@ -72,17 +81,16 @@ class EditSlide: public Fl_Group {
     public:
         PreviewButton im_button;
         Fl_Button pres_button;
-        Fl_Image *img = NULL;
-        Fl_Font font = FL_HELVETICA;
-        std::string lyric = "";
 
     EditSlide(int x, int y, int w, const char *label = "edit slide", Fl_Image* in_img=NULL) :
         // The 1 here needs to stay a 1. Tried 0 and 
         // The image button didn't come up
         Fl_Group(x, y, w, 1, label),
-        im_button(x, y, w, 0),
+        im_button(x, y, w, 0, in_img),
         pres_button(x, y, w, 0, "Show") {
         end();
+
+        im_button.full_img = in_img;
 
         int txt_x, txt_y, txt_w, txt_h;
         fl_font(pres_button.labelfont(), pres_button.labelsize());
@@ -99,23 +107,6 @@ class EditSlide: public Fl_Group {
         im_button.size(w, ratio_h);
         pres_button.resize(x, y + ratio_h, w, txt_h);
     }
-};
-
-// current list of songs that can be edited
-static struct {
-    Fl_Font font = FL_HELVETICA;
-    Fl_Fontsize font_size = 50;
-    std::vector<std::string> lyrics = {};
-    std::string background_name = "";
-} song_edit_list;
-
-struct SlideAndButton {
-    // full size image. The Fl_Button takes a copy
-    Fl_Image *in_img = NULL;
-    Fl_Button im, pres;
-    Fl_Font font = FL_HELVETICA;
-    Fl_Fontsize f_size = 50;
-    std::string lyrics = "";
 };
 
 struct Slides {
@@ -143,7 +134,9 @@ class PresWin : public Fl_Window {
     PresWin(int x, int y, int w, int h, const char *label = NULL) : Fl_Window(x, y, w, h, label) {}
 
     void draw() {
-        cur_img->draw(0, 0);
+        if (cur_img != NULL){
+            cur_img->draw(this->x(), this->y(), this->w(), this->h());
+        }
 
         fl_color(r, g, b);
         fl_font(font, font_size);
@@ -203,7 +196,18 @@ void edit_cb(Fl_Widget *w, void*){
 
 // TODO: have the present buttons push content to the main window.
 void show_cb(Fl_Widget *w, void*){
-
+    // grab the image from the parent and set it
+    EditSlide *parent = (EditSlide*)w->parent();
+    if (parent == NULL){
+        std::cout << "null parent " << __LINE__ << "\n";
+        return;
+    }
+    pres_win.font = parent->im_button.font;
+    pres_win.font_size = parent->im_button.font_size;
+    pres_win.cur_txt = parent->im_button.txt;
+    pres_win.cur_img = parent->im_button.full_img;
+    pres_win.show();
+    pres_win.redraw();
 }
 
 int main(int argc, char *argv[]){
@@ -221,12 +225,10 @@ int main(int argc, char *argv[]){
     color_in.rgb(1, 1, 1);
     text_in.value("test label");
     present.callback(show_full_win);
-    EditSlide slide(slide_edit_list.x(), slide_edit_list.y(), 300);
+    EditSlide slide(slide_edit_list.x(), slide_edit_list.y(), 300, "edit slide", im_vec[0]);
+    slide.pres_button.callback(show_cb);
     slide_edit_list.add(slide);
     slide_edit_list.size(slide.w() + slide_edit_list.scrollbar_size(), slide.h() + slide_edit_list.scrollbar_size());
-
-    int w = slide_edit_list.w();
-    int h = slide_edit_list.h();
 
     editor_window.show();
     slide_edit_list.scroll_to(0, 0);
