@@ -35,9 +35,63 @@ static std::vector<Fl_Image*> im_vec;
 
 #define TXT_MARGIN (10)
 
+
+struct Slides {
+    Fl_Font font = FL_HELVETICA;
+    Fl_Fontsize font_size = 50;
+    std::vector<std::string> lyrics = {};
+    Fl_Image *full_size_im = NULL;
+    std::string background_name = "";
+};
+
+static Slides edit_slides;
+
+struct Set {
+    std::vector<Slides> slides = {};
+};
+
+class PresWin : public Fl_Window {
+    public:
+        Fl_Fontsize font_size = 30; 
+        uchar r = 0, g = 0, b = 0;
+        Fl_Font font = FL_HELVETICA;
+        Fl_Image *cur_img = NULL, *next_img = NULL;
+        std::string cur_txt = "", next_txt = "";
+    
+    PresWin(int x, int y, int w, int h, const char *label = NULL) : Fl_Window(x, y, w, h, label) {}
+
+    void draw() {
+        if (cur_img != NULL){
+            cur_img->draw(this->x(), this->y(), this->w(), this->h());
+        }
+
+        fl_color(r, g, b);
+        int scaled_font_size = (font_size*this->h())/100;
+        fl_font(font, scaled_font_size);
+        // try to put the text at the center of the screen
+        int tmp_w, tmp_h;
+        fl_measure(cur_txt.c_str(), tmp_w, tmp_h);
+        int txt_x = this->x_root() + this->w()/2 - (tmp_w/2), txt_y = this->y_root() + (this->h()/2) - (tmp_h/2);
+        fl_draw(cur_txt.c_str(), txt_x, txt_y, tmp_w, tmp_h, FL_ALIGN_CENTER, NULL, 0);
+    }
+};
+
+static PresWin pres_win(0, 0, 0, 0, "Pres window");
+
+#define STR(x) #x
+
+Fl_Window editor_window(720, 720, "Editor Window");
+Fl_Button present(300, 210, 80, 40, "Present");
+Fl_Input_Choice font_in(100, 100, 200, 20, "font number");
+Fl_Int_Input font_size_in(300, 300, 50, 30, "font size");
+Fl_Input text_in(300, 510, 200, 30, "text in");
+Fl_Color_Chooser color_in(400, 50, 200, 100, "font color");
+Fl_Button add_slide_b(200, 150, 25, 25, "+");
+Fl_Scroll slide_edit_list(50, 200, 0, 0, "Slides");
+
 class PreviewButton : public Fl_Button {
     public:
-        Fl_Fontsize font_size = 50; 
+        Fl_Fontsize font_size = 30; 
         uchar r = 0, g = 0, b = 0;
         Fl_Font font = FL_HELVETICA;
         Fl_Image *full_img = NULL, *scaled_img = NULL;
@@ -48,9 +102,6 @@ class PreviewButton : public Fl_Button {
 
         // keep a reference of the full size image
         full_img = img;
-        if (img != NULL){
-            scaled_img = img->copy(this->w(), this->h());
-        }
     }
     void draw() {
         if (scaled_img != NULL && (scaled_img->w() != this->w() || scaled_img->h() != this->h())){
@@ -64,7 +115,9 @@ class PreviewButton : public Fl_Button {
         }
 
         fl_color(r, g, b);
-        fl_font(font, font_size);
+
+        int font_scaled_size = (this->h()*font_size)/100;
+        fl_font(font, font_scaled_size);
         // try to put the text at the center of the screen
         int tmp_w, tmp_h;
         fl_measure(txt.c_str(), tmp_w, tmp_h);
@@ -108,58 +161,6 @@ class EditSlide: public Fl_Group {
         pres_button.resize(x, y + ratio_h, w, txt_h);
     }
 };
-
-struct Slides {
-    Fl_Font font = FL_HELVETICA;
-    Fl_Fontsize font_size = 50;
-    std::vector<std::string> lyrics = {};
-    Fl_Image *full_size_im = NULL;
-    std::string background_name = "";
-};
-
-static Slides edit_slides;
-
-struct Set {
-    std::vector<Slides> slides = {};
-};
-
-class PresWin : public Fl_Window {
-    public:
-        Fl_Fontsize font_size = 50; 
-        uchar r = 0, g = 0, b = 0;
-        Fl_Font font = FL_HELVETICA;
-        Fl_Image *cur_img = NULL, *next_img = NULL;
-        std::string cur_txt = "", next_txt = "";
-    
-    PresWin(int x, int y, int w, int h, const char *label = NULL) : Fl_Window(x, y, w, h, label) {}
-
-    void draw() {
-        if (cur_img != NULL){
-            cur_img->draw(this->x(), this->y(), this->w(), this->h());
-        }
-
-        fl_color(r, g, b);
-        fl_font(font, font_size);
-        // try to put the text at the center of the screen
-        int tmp_w, tmp_h;
-        fl_measure(cur_txt.c_str(), tmp_w, tmp_h);
-        int txt_x = this->x_root() + this->w()/2 - (tmp_w/2), txt_y = this->y_root() + (this->h()/2) - (tmp_h/2);
-        fl_draw(cur_txt.c_str(), txt_x, txt_y, tmp_w, tmp_h, FL_ALIGN_CENTER, NULL, 0);
-    }
-};
-
-static PresWin pres_win(0, 0, 0, 0, "Pres window");
-
-#define STR(x) #x
-
-Fl_Window editor_window(720, 720, "Editor Window");
-Fl_Button present(300, 210, 80, 40, "Present");
-Fl_Input_Choice font_in(100, 100, 200, 20, "font number");
-Fl_Int_Input font_size_in(300, 300, 50, 30, "font size");
-Fl_Input text_in(300, 510, 200, 30, "text in");
-Fl_Color_Chooser color_in(400, 50, 200, 100, "font color");
-Fl_Button add_slide_b(200, 150, 25, 25, "+");
-Fl_Scroll slide_edit_list(50, 200, 0, 0, "Slides");
 
 #define MAP_FONT(x) STR(x), x
 std::map<std::string, Fl_Font> font_val_map = {
@@ -226,6 +227,7 @@ int main(int argc, char *argv[]){
     text_in.value("test label");
     present.callback(show_full_win);
     EditSlide slide(slide_edit_list.x(), slide_edit_list.y(), 300, "edit slide", im_vec[0]);
+    slide.im_button.txt = "Stuff";
     slide.pres_button.callback(show_cb);
     slide_edit_list.add(slide);
     slide_edit_list.size(slide.w() + slide_edit_list.scrollbar_size(), slide.h() + slide_edit_list.scrollbar_size());
